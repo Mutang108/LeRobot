@@ -16,6 +16,8 @@ The four inference wrappers live under `course/liftcube/src/starter/models/`. Th
 
 Full loading uses separate optional environments: pinned LeRobot v0.4.2 for SmolVLA, author-matched VLASH for SO101 PI05, GR00T N1.5, or the pinned SO101 OpenVLA-OFT implementation. These are not interchangeable installations and are not vendored together. Preserve the simulator's existing dependencies; use a validated inference-service boundary when they cannot coexist. Model, tokenizer, processor, statistics and trained head files must be provisioned locally under their own licenses before loading.
 
+Native imports can require more than the policy class: VLASH's package initialization imports its declared Reachy SDK dependencies, while OFT imports its RLDS utilities even for inference. OFT uses its own Transformers fork, TensorFlow 2.15/TFDS and `dlimp`; the plain OpenVLA environment is insufficient. A CPU-only dependency check may use TensorFlow CPU 2.15 with NumPy 1.26 in a separate environment. Resolve and pin those dependencies before real loading rather than editing shared dependencies or stubbing missing modules. The loader uses pinned processor classes instead of enabling arbitrary checkpoint Python code.
+
 ## Complete source snapshots
 
 | Project | Fixed official source | Included |

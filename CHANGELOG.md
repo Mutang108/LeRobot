@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+修正OFT本地处理器的自动分派：显式使用固定后端图像类与标准tokenizer，避免非交互加载陷入checkpoint自定义代码确认；补充CPU回归及原生依赖说明。
+
+Load OFT processors through pinned implementation classes and a standard tokenizer, avoiding checkpoint custom-code prompts during noninteractive local loading. Add CPU regression coverage and native dependency guidance.
+
 新增SmolVLA、SO101版π₀.₅、GR00T N1.5及OpenVLA-OFT单front推理包装与本地加载入口，复用六关节chunk执行、单位校验和回合/任务边界清缓存。补齐加载前参数检查、BF16输出转换、严格加载报告及OFT平台参数；同步接口、依赖和Agent指南，并增加独立CPU接口CI。完整模型、GPU及闭环验收待完成，未增加VLA训练入口。
 
 Add four single-front VLA wrappers/local loaders with shared joint-chunk execution and boundary resets. Validate execution settings before loading, handle BF16 outputs, retain strict-loading reports and expose the OFT platform flag. Update interface/dependency/agent guides and add CPU interface CI. Full-model/GPU/rollout acceptance and VLA training remain separate.

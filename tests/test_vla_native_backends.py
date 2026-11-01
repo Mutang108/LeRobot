@@ -18,7 +18,7 @@ if AVAILABLE:
     from starter.models.smolvla import SmolVLAFrontPolicy
     from starter.models.pi05 import Pi05FrontPolicy, single_front_config, strict_author_state
     from starter.models.gr00t import Gr00tFrontPolicy, load_groot_weights
-    from starter.models.openvla_oft import OpenVLAOFTFrontPolicy, check_statistics
+    from starter.models.openvla_oft import OpenVLAOFTFrontPolicy, check_statistics, load_local_processor
     from starter.models.backend_io import require_complete_load, tensor_chunk
     from starter.evaluation.evaluate import parse_args, run_episode
 
@@ -212,6 +212,34 @@ class NativeBackendTests(unittest.TestCase):
             if bad == 'equal': stats['action']['max'][0] = -100
             if bad == 'nan': stats['action']['min'][0] = float('nan')
             with self.assertRaises(ValueError): check_statistics(stats)
+
+    def test_oft_processor_avoids_checkpoint_auto_image_dispatch(self):
+        calls = []
+        image, tokenizer = object(), object()
+        class ImageProcessor:
+            @classmethod
+            def from_pretrained(cls, path, **kwargs):
+                calls.append(('image', path, kwargs))
+                return image
+        class Tokenizer:
+            @classmethod
+            def from_pretrained(cls, path, **kwargs):
+                calls.append(('tokenizer', path, kwargs))
+                return tokenizer
+        class Processor:
+            def __init__(self, **kwargs): self.parts = kwargs
+            @classmethod
+            def from_pretrained(cls, *args, **kwargs):
+                raise AssertionError('Auto dispatch would prompt for checkpoint code')
+        modules = {'transformers': SimpleNamespace(AutoTokenizer=Tokenizer),
+                   'prismatic.extern.hf.processing_prismatic': SimpleNamespace(
+                       PrismaticImageProcessor=ImageProcessor, PrismaticProcessor=Processor)}
+        with patch.dict(sys.modules, modules):
+            result = load_local_processor('/trusted/local/model')
+        self.assertEqual(result.parts, {'image_processor': image, 'tokenizer': tokenizer})
+        self.assertEqual(calls, [('image', '/trusted/local/model', {'local_files_only': True}),
+                                 ('tokenizer', '/trusted/local/model',
+                                  {'local_files_only': True, 'trust_remote_code': False})])
 
     def test_native_mixed_unit_roundtrip_preserves_jaw(self):
         obs = self.obs()

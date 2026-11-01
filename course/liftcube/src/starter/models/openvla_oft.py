@@ -18,6 +18,15 @@ def check_statistics(stats):
             raise ValueError('OFT BOUNDS requires finite ordered six-channel ranges and all-channel masks')
 
 
+def load_local_processor(model_path):
+    """Use pinned implementation classes, not checkpoint AutoImageProcessor code."""
+    from transformers import AutoTokenizer
+    from prismatic.extern.hf.processing_prismatic import PrismaticImageProcessor, PrismaticProcessor
+    image = PrismaticImageProcessor.from_pretrained(str(model_path), local_files_only=True)
+    tokenizer = AutoTokenizer.from_pretrained(str(model_path), local_files_only=True, trust_remote_code=False)
+    return PrismaticProcessor(image_processor=image, tokenizer=tokenizer)
+
+
 class OpenVLAOFTFrontPolicy(JointChunkPolicy):
     def __init__(self, model, processor, action_head, proprio_projector, predict_action, *,
                  unnorm_key, task, joint_units, center_crop, chunk_size, observation_spec=None,
@@ -69,7 +78,6 @@ class OpenVLAOFTFrontPolicy(JointChunkPolicy):
             raise ValueError('This adapter supports the SO101 BOUNDS recipe only')
         import torch
         from prismatic.extern.hf.modeling_prismatic import OpenVLAForActionPrediction
-        from prismatic.extern.hf.processing_prismatic import PrismaticProcessor
         from prismatic.models.action_heads import L1RegressionActionHead
         from prismatic.models.projectors import ProprioProjector
         from experiments.robot.openvla_utils import get_vla_action
@@ -86,7 +94,7 @@ class OpenVLAOFTFrontPolicy(JointChunkPolicy):
         if stats_file.is_file():
             model.norm_stats = json.loads(stats_file.read_text(encoding='utf-8'))
         check_statistics(model.norm_stats[options['unnorm_key']])
-        processor = PrismaticProcessor.from_pretrained(str(model_path), local_files_only=True)
+        processor = load_local_processor(model_path)
         head = L1RegressionActionHead(input_dim=model.llm_dim, hidden_dim=model.llm_dim, action_dim=6)
         projector = ProprioProjector(llm_dim=model.llm_dim, proprio_dim=6)
         for component, file in zip((head, projector), files):

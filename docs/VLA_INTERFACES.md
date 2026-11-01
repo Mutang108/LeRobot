@@ -1,8 +1,8 @@
 # VLA推理接口 / VLA inference interfaces
 
-当前提供SmolVLA、SO101版π₀.₅、GR00T N1.5和OpenVLA-OFT单front推理包装及共享六关节chunk执行层。CPU替身和冻结上游mask函数检查不加载完整模型；真实checkpoint加载、GPU前向及LiftCube闭环尚未验收。本页不提供训练入口，原SmallCNN/BC/PPO默认不变。
+当前提供SmolVLA、SO101版π₀.₅、GR00T N1.5和OpenVLA-OFT单front推理包装及共享六关节chunk执行层。边界测试使用CPU替身；SmolVLA/π₀.₅另通过真实权重CPU加载及合成输入前向，OpenVLA原基座通过CPU加载和处理器检查。GR00T完整构造受下述CUDA依赖限制；任务统计/受训形态头、GPU及LiftCube闭环仍需验收。本页不提供训练入口，原SmallCNN/BC/PPO默认不变。
 
-Single-front wrappers for SmolVLA, SO101 PI05, GR00T N1.5 and OpenVLA-OFT share joint-chunk execution. CPU fixtures and the pinned masking function do not load full models. Real checkpoint loading, GPU inference and LiftCube rollouts remain unaccepted. No VLA trainer is supplied; SmallCNN/BC/PPO defaults are unchanged.
+Four single-front wrappers share joint-chunk execution. Boundary tests use CPU fixtures; separate real-weight checks cover SmolVLA/PI05 CPU loading and synthetic forwards, plus original OpenVLA core loading and preprocessing. GR00T construction has the CUDA limitation below. Task statistics/trained embodiment heads, GPU inference and LiftCube rollouts still require acceptance. No VLA trainer is supplied; SmallCNN/BC/PPO defaults are unchanged.
 
 ## 公共执行层 / Shared execution
 
@@ -53,6 +53,10 @@ For this loader, `--checkpoint` names a trusted local JSON rather than a SmallCN
 
 STATE/ACTION must use MEAN_STD and VISUAL IDENTITY. Strict loading and explicit statistics are required; no silent identity or cross-task fallback. Six-dimensional features do not prove calibration or single-camera task competence. Preserve strict-loading failures for legacy checkpoints rather than suppressing missing/unexpected keys.
 
+当前固定SmolVLA基座的处理器存档未提供此包装要求的显式六维state统计。原生模型的严格加载与归一化张量前向可单独检查，但真实motor/q包装仍须合格训练统计；不要把action统计直接当state统计，也不补造单位统计。
+
+The pinned SmolVLA base processor files lack the explicit six-channel state statistics required here. Native loading/normalized-tensor forwards can be checked separately; physical motor/q adaptation still needs accepted training statistics. Do not substitute action statistics or fabricated identity values.
+
 资源与运行获准后，在兼容的已配置环境使用公共评测入口（本命令会启动仿真，不属于CPU检查）：
 
 After resource and execution approval, use the common runner in a compatible configured runtime. This starts simulation, not a CPU check:
@@ -71,13 +75,17 @@ If simulator and model dependencies cannot coexist, use a separately validated i
 
 | 路线 / Backend | 可复用 / Reusable | 仍须解决 / Remaining |
 | --- | --- | --- |
-| π₀.₅ | `models.pi05:Pi05FrontPolicy`；原生批次、内嵌统计、首视角及两空槽、严格权重名/存储alias恢复 / Native batches, embedded stats, masked slots and strict alias loading | 完整VLASH/权重/单front前向尚未运行；不是HF原版PI05模型图 / Full VLASH/checkpoint forward pending, not stock HF PI05 |
+| π₀.₅ | `models.pi05:Pi05FrontPolicy`；原生批次、内嵌统计、首视角及两空槽、严格权重名/存储alias恢复；真实CPU加载/合成前向通过 / Native batches, embedded stats, masked slots, strict alias loading and CPU synthetic forward checked | GPU、真实观测与闭环待验；不是HF原版PI05模型图 / GPU and real-observation rollouts pending, not stock HF PI05 |
 | GR00T | `models.gr00t:Gr00tFrontPolicy`；官方单图模态、5＋1输出、原生变换统计及受检加载 / Single-camera modality, 5+1 outputs and native transforms | 需要匹配单图配置及SO101形态元数据的checkpoint；通用基座不自带已训练SO101头 / Requires matching trained embodiment metadata and one-view recipe |
 | OpenVLA-OFT | `models.openvla_oft:OpenVLAOFTFrontPolicy`；单图原生函数、六维BOUNDS、本体投影和连续头 / Native single-image OFT, six-channel BOUNDS, projector and continuous head | 单图受训头/投影及六维后端常量须匹配；不接受7维末端原版 / Requires trained one-view components and SO101 backend constants, not vanilla EEF output |
 
 三个包装均接受注入原生backend，CPU检查使用替身；真实`load()`沿各自原生库调用，不能把替身通过称为完整依赖安装/权重加载通过。它们共用队列、任务切换、观测白名单、动作拒绝及公共评测，不共用错误的模型归一化。没有随机头执行、隐藏的维度截取或新训练器。
 
 Each wrapper accepts an injected native backend for CPU checks and supplies a native local loader. Fixture success is not full dependency/checkpoint integration. Queues, task switches, input whitelists, action rejection and evaluation are shared—not model normalization. No random-head execution, hidden dimension trimming or trainer is added.
+
+冻结GR00T/Eagle代码的`radio_model.py`在导入时调用`torch.cuda.get_device_capability()`；无GPU进程可读取单图模态与校验权重文件，但完整原生构造会失败。不要伪造CUDA能力来声称CPU加载通过。OpenVLA的CPU严格加载仅验证原始通用核心与单图处理器，不补齐受训SO101 L1头/投影，也不把原版7维动作当六关节输出。
+
+The pinned GR00T/Eagle `radio_model.py` queries CUDA capability at import. CPU-only processes can inspect modalities and verify files but cannot complete native construction; do not fake CUDA capability. OpenVLA CPU loading covers the original generic core and processor, not missing trained SO101 components or six-joint decoding.
 
 ### 本地描述文件与后端版本 / Local descriptors and backend versions
 
@@ -94,6 +102,10 @@ Common fields: `backend`, `joint_names`, `joint_units`, `model_path`, `model_rev
 GR00T的CPU受检加载入口绕开上游假设“只返回model”的`from_pretrained`包装，以HF基类获取完整loading report；禁止missing/unexpected/mismatched/error。OFT同样检查模型loading report，并严格加载已存在的head/projector（safetensors或可信weights-only state_dict），不调用会改写本地config/模型代码的辅助加载器。OFT原生函数有模块级DEVICE，必须与请求设备一致；不要在同一进程中混用不同设备。CPU fixtures不导入这些大型后端，也没有开启GPU。
 
 GR00T uses the HF base loader for a complete loading report, bypassing the native model-only return assumption. OFT checks model loading info and strictly loads existing head/projector files without the helper that edits checkpoint files. Its module-level DEVICE must match the requested device. CPU fixtures import none of these heavy backends and use no GPU.
+
+OFT的`load_local_processor()`显式使用固定后端的`PrismaticImageProcessor`与标准tokenizer组装处理器，不经过checkpoint的`AutoImageProcessor`代码分派；tokenizer设置`trust_remote_code=False`。无需交互批准或执行checkpoint附带的Python来加载图像处理配置。
+
+OFT constructs its processor from the pinned `PrismaticImageProcessor` and a standard tokenizer with `trust_remote_code=False`. It avoids checkpoint-driven AutoImageProcessor dispatch and its interactive custom-code prompt.
 
 GR00T/OFT遇到不完整加载时抛出`ValueError`，完整原生报告保存在异常的`loading_info`属性。诊断记录留在本地，公开前检查其中的模型路径等信息。
 

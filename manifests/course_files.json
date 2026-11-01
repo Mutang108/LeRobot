@@ -16,8 +16,8 @@
   },
   {
     "path": "course/liftcube/AGENTS.md",
-    "bytes": 18647,
-    "sha256": "989f94ac4609b48f2262f264d1bdf5fd60c633e5d3d4dd62835ddf77837ab148"
+    "bytes": 18966,
+    "sha256": "c9c539ad915ea03644deb73f7b75b783235cdff287e4de3370a22f12f62a4b60"
   },
   {
     "path": "course/liftcube/README.md",
@@ -61,8 +61,8 @@
   },
   {
     "path": "course/liftcube/patches/team-interface.patch",
-    "bytes": 90438,
-    "sha256": "5f0f8f43caf2516aecd7434dd651ea9ba1cd07a110d71908d2c4a934f87d7938"
+    "bytes": 90870,
+    "sha256": "ab0517916af627145198e6d09d2ceaa88e0522eddf01e55d93cd2c207f7faf1a"
   },
   {
     "path": "course/liftcube/pyproject.toml",
@@ -266,8 +266,8 @@
   },
   {
     "path": "course/liftcube/src/starter/models/openvla_oft.py",
-    "bytes": 6761,
-    "sha256": "b020d1780d0ff85b1a4b7342fae74fa7656ab8cc2960f76f53187322c667b802"
+    "bytes": 7185,
+    "sha256": "d22d9b9228505bcd010b68ac8f0b27eca72912b149e7bf2dced62910ffcbdce5"
   },
   {
     "path": "course/liftcube/src/starter/models/pi05.py",

@@ -26,6 +26,7 @@
 - **SmolVLA单front推理**：见[推理接口](../../docs/VLA_INTERFACES.md)和`tests/test_vla_interfaces.py`。本地适配JSON通过`--policy-class starter.models.smolvla:SmolVLAFrontPolicy`加载；相机首槽、缺槽mask、六维motor和显式统计严格核对。CPU替身/mask检查不等于完整权重或GPU/仿真通过；不将新包装接入SmallCNN训练器。
 - **其他VLA包装**：`models/pi05.py`保留SO101 VLASH内嵌统计/state_cond，`models/gr00t.py`使用单图模态和受检形态加载，`models/openvla_oft.py`要求六维SO101常量及已训练L1头/本体投影。加载描述和固定后端见上述接口文档；不得以假头、三图改名或HF不同模型图代替。先运行`test_vla_native_backends.py`，大型backend导入/完整模型另验。
 - **修改VLA加载器**：先校验描述中的身份、单front观测与执行参数，再导入大型backend或分配模型；保留严格加载错误的`loading_info`。张量输出转FP32后才能交NumPy（BF16不受支持），不借转换裁剪或截维度。OFT CLI需显式`--robot_platform SO101`，其后端在首次导入时读取真实进程参数；程序调用者须自行保证常量已正确初始化，不在加载器中改全局常量或`sys.argv`。
+- **OFT本地处理器**：使用`load_local_processor()`的显式后端图像类和标准tokenizer，不因自动分派提示就开启checkpoint任意代码。真实backend导入还需要其声明的TF/TFDS/dlimp及专用Transformers；在隔离环境补齐，不修改共享环境或注入假模块来通过验收。
 - **新增完整抓放任务**：扩展 `envs/`、`envs/factory.py` 和独立任务配置，复用公共数据/策略边界；接入实际任务的观测与评分，保留LiftCube配置和回归检查。旧权重仅在规格兼容时初始化新实验，不能当作同任务resume。
 
 新模型的最小交付包含：可加载的策略、真实输入/动作映射、独立配置、相关测试、保存加载说明及依赖/权重获取方式。先验证前向与保存加载，再验证获准的少步闭环；只有完成优化和恢复检查后才标为支持训练。
