@@ -18,6 +18,10 @@ An opt-in [planar EE development controller](PLANAR_EE_DEVELOPMENT.md) accepts a
 
 ## 1. 观测 / Observations
 
+VLA推理的单front、显式统计、动作块和跨回合缓存边界见[具体接口](VLA_INTERFACES.md)。策略`reset()`是可选清缓存钩子；公共评测在开始及所有退出路径调用，不得在其中重seed或复位模型参数。任务切换与外部接管也须清掉旧块。
+
+See [VLA interfaces](VLA_INTERFACES.md) for single-front inputs, explicit statistics and chunks. Optional policy `reset()` clears caches at episode boundaries and all exit paths; it must not reseed or reset weights. Clear chunks on task changes and interventions too.
+
 策略输入显式列出图像键、本体字段顺序、形状、单位、归一化、时间戳和任务条件。图像必须对应动作前的观测，记录曝光/采样时刻与策略读取时刻。物体和目标信息来自许可的视觉或任务条件通道，不能把仿真真值改名为本体字段后传入网络。训练 reward、诊断信息与网络输入分开；critic 输入也须独立确认许可。
 
 List image keys, ordered proprioceptive fields, shapes, units, normalization, timestamps and task conditioning explicitly. Images must represent pre-action observations; record capture and policy-read times. Object and target information must come from permitted visual or task-conditioning channels, not simulator truth renamed as proprioception. Keep rewards and diagnostics separate from network inputs, and review critic-input permissions separately.

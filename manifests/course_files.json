@@ -16,13 +16,13 @@
   },
   {
     "path": "course/liftcube/AGENTS.md",
-    "bytes": 17203,
-    "sha256": "3582241a0d2fb27f7511622d7b414938e5adfbda5a2dd5d55cdeb27525660fc0"
+    "bytes": 18647,
+    "sha256": "989f94ac4609b48f2262f264d1bdf5fd60c633e5d3d4dd62835ddf77837ab148"
   },
   {
     "path": "course/liftcube/README.md",
-    "bytes": 11486,
-    "sha256": "fcbc35248fe24211f4ce251b508af8ede492531aa88a6e1b3a626cac1053ee94"
+    "bytes": 11717,
+    "sha256": "9408ce478d1cd1060ced99275652d6598d5a4dc8c95930689c4a3aa51a714303"
   },
   {
     "path": "course/liftcube/TRAINING.md",
@@ -61,8 +61,8 @@
   },
   {
     "path": "course/liftcube/patches/team-interface.patch",
-    "bytes": 55553,
-    "sha256": "7ee12afe041ffff4aada90ef1a1a35fb15571e5e0bfe30ee0452138d462f2c6d"
+    "bytes": 90438,
+    "sha256": "5f0f8f43caf2516aecd7434dd651ea9ba1cd07a110d71908d2c4a934f87d7938"
   },
   {
     "path": "course/liftcube/pyproject.toml",
@@ -186,8 +186,8 @@
   },
   {
     "path": "course/liftcube/src/starter/evaluation/evaluate.py",
-    "bytes": 7547,
-    "sha256": "7417fa7b0d014bf510821e52fd462f5d9a895491977857e9b8bb3a094d9b8c23"
+    "bytes": 8682,
+    "sha256": "6392be35d74c5bb4c4acacf8663ada4b78ad3d39fed4870ff8935a5bb98b7f2e"
   },
   {
     "path": "course/liftcube/src/starter/evaluation/random_policy.py",
@@ -243,6 +243,41 @@
     "path": "course/liftcube/src/starter/logging/metrics.py",
     "bytes": 5378,
     "sha256": "99cedfb9ef3cdb70ff7e32b79f0a7821a4268aafcc622d94eb4207a00f568ae0"
+  },
+  {
+    "path": "course/liftcube/src/starter/models/__init__.py",
+    "bytes": 78,
+    "sha256": "2a56356bf9f7a7d08b53dfe031397ffd03450aef6ccec150954977f053ba44ba"
+  },
+  {
+    "path": "course/liftcube/src/starter/models/backend_io.py",
+    "bytes": 2471,
+    "sha256": "3dfa9c001a4ec939bb94bf1b8010738a03bf28d08b2a8e3f713f2e339b9f8e03"
+  },
+  {
+    "path": "course/liftcube/src/starter/models/gr00t.py",
+    "bytes": 5050,
+    "sha256": "c37730492eb45ea0d2d3cf323ac7e7bb7ca3c5d5f7b4015cb47e4bac0772d27f"
+  },
+  {
+    "path": "course/liftcube/src/starter/models/joint_chunk.py",
+    "bytes": 5675,
+    "sha256": "c9548ae6e0ef6446b9f0e4bd7cc8b715f8648fd17e7f29efa05d9c3797023794"
+  },
+  {
+    "path": "course/liftcube/src/starter/models/openvla_oft.py",
+    "bytes": 6761,
+    "sha256": "b020d1780d0ff85b1a4b7342fae74fa7656ab8cc2960f76f53187322c667b802"
+  },
+  {
+    "path": "course/liftcube/src/starter/models/pi05.py",
+    "bytes": 5888,
+    "sha256": "1e4a12dfbb91eb2ced0297c811287164dbb94a3bd0c2e5607c0ec69f4ba9c24f"
+  },
+  {
+    "path": "course/liftcube/src/starter/models/smolvla.py",
+    "bytes": 6328,
+    "sha256": "e47200e0c51a1ca35d25169b2f18cd52a30791daf4edeabf00b26021bd042761"
   },
   {
     "path": "course/liftcube/src/starter/rewards/__init__.py",

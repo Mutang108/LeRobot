@@ -21,6 +21,7 @@ For current LiftCube work, start with the [task guide](../course/liftcube/README
 | 视觉规则抓取 / Rule grasping | [规则指南](SCRIPTED_LIFTCUBE.md)；匹配标定与运动学，先`--check`再获准闭环，无需演示或权重 / Calibrated kinematics, offline check then authorized rollout; no dataset/weights |
 | 三维末端开发 / Planar EE development | [开发契约](PLANAR_EE_DEVELOPMENT.md)；独立标定、有效初始姿态及匹配策略，物理精度未验收 / Separate calibration, valid starting pose and compatible policy; tracking not accepted |
 | BC/PPO / Learning | [训练指南](../course/liftcube/TRAINING.md)；当前为六关节SmallCNN参考路径，BC先完成演示准入 / Six-joint SmallCNN reference path; BC requires accepted demonstrations |
+| VLA推理接口 / VLA inference interfaces | [四种包装与CPU检查](VLA_INTERFACES.md)；先验证单front、六关节与chunk边界，完整模型验收需要匹配后端、权重与统计 / Check boundaries first; full loading requires matching backends, weights and statistics |
 
 先在本地运行以下检查。第一条应成功；第二条对未填写的模板应返回退出码 3，并逐项列出缺失字段。
 

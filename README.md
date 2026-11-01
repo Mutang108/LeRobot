@@ -30,7 +30,7 @@
 ## 当前范围
 
 - **开发环境**：SO-101 LiftCube，提供环境适配、演示读取、BC、参考 PPO 和评测入口。配套镜像与运行方法见 [LiftCube 指南](course/liftcube/README.md)。
-- **模型计划**：ACT、SmolVLA、OpenVLA-OFT、π₀.₅ 与 GR00T；这些模型的LiftCube适配尚在开发，候选演示需先完成训练准入。
+- **VLA接口**：[SmolVLA、π₀.₅、GR00T和OpenVLA-OFT单front推理包装](docs/VLA_INTERFACES.md)已通过CPU接口检查，完整模型与GPU/仿真验收待完成。ACT及VLA训练接入仍在开发。
 - **规则基线**：[LiftCube视觉抓取脚本](docs/SCRIPTED_LIFTCUBE.md)，使用RGB定位与逆运动学，作为后续标定和任务适配的开发基准；已有仿真抓取成功，跨场景稳定性仍待改进，需要独立标定。
 - **目标任务**：从方块抓取与抬升扩展到视觉多物体抓放，按课程发布的环境和评分规则评测，再进行真机部署。
 

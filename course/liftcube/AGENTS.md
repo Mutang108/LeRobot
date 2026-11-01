@@ -22,7 +22,10 @@
 - **运行规则基准**：走`starter.scripts.evaluate_scripted`，先按规则指南检查外部标定；不需要演示、训练权重或`build_policy()`。不要为此运行BC/ACT优化验证。正式标定迁移只修改读取/坐标边界，控制SDK改变时再处理执行层，复用未变验证。
 - **接入演示数据**：沿 `data/hf_adapter.py → schema/validator → loader → training/train_bc.py` 检查字段、episode划分和标签单位；先验证一小批真实样本，再做获准的小批拟合。合成单测不替代真实数据映射验收。
 - **新增 ACT/VLA**：在实际接入时新增 `starter/models/` 包装，核对 `interfaces/policy.py` 中 `act/forward/update/save/load` 及调用者。推理先接 `evaluation.evaluate.load_policy` 的 `--policy-class`；训练再接 `utils.build_policy`、数据预处理和对应算法。现有BC/PPO依赖SmallCNN的具体实现，不能仅满足协议或替换模型名就宣称可训练；后端依赖保持可选。
-- **处理动作chunk**：`act()`向执行层返回当前一个六维目标，预测chunk可在包装内缓存；规格中的策略频率须与 `envs/timing.py` 一致。现有 `PolicyModel` 和评测循环没有通用策略reset回调，接入有状态模型时须补充并测试回合开始、结束、任务切换时的缓存清空，不能跨回合沿用旧动作。
+- **处理动作chunk**：`act()`向执行层返回当前一个六维目标，预测chunk可在包装内缓存；规格中的策略频率须与 `envs/timing.py` 一致。公共`run_episode`在两端和异常退出调用可选`policy.reset()`清缓存、不重seed；旧无reset策略兼容。复用`models/joint_chunk.py`；任务文本变化走`set_task()`，接管后显式reset，不能跨回合沿用旧动作。
+- **SmolVLA单front推理**：见[推理接口](../../docs/VLA_INTERFACES.md)和`tests/test_vla_interfaces.py`。本地适配JSON通过`--policy-class starter.models.smolvla:SmolVLAFrontPolicy`加载；相机首槽、缺槽mask、六维motor和显式统计严格核对。CPU替身/mask检查不等于完整权重或GPU/仿真通过；不将新包装接入SmallCNN训练器。
+- **其他VLA包装**：`models/pi05.py`保留SO101 VLASH内嵌统计/state_cond，`models/gr00t.py`使用单图模态和受检形态加载，`models/openvla_oft.py`要求六维SO101常量及已训练L1头/本体投影。加载描述和固定后端见上述接口文档；不得以假头、三图改名或HF不同模型图代替。先运行`test_vla_native_backends.py`，大型backend导入/完整模型另验。
+- **修改VLA加载器**：先校验描述中的身份、单front观测与执行参数，再导入大型backend或分配模型；保留严格加载错误的`loading_info`。张量输出转FP32后才能交NumPy（BF16不受支持），不借转换裁剪或截维度。OFT CLI需显式`--robot_platform SO101`，其后端在首次导入时读取真实进程参数；程序调用者须自行保证常量已正确初始化，不在加载器中改全局常量或`sys.argv`。
 - **新增完整抓放任务**：扩展 `envs/`、`envs/factory.py` 和独立任务配置，复用公共数据/策略边界；接入实际任务的观测与评分，保留LiftCube配置和回归检查。旧权重仅在规格兼容时初始化新实验，不能当作同任务resume。
 
 新模型的最小交付包含：可加载的策略、真实输入/动作映射、独立配置、相关测试、保存加载说明及依赖/权重获取方式。先验证前向与保存加载，再验证获准的少步闭环；只有完成优化和恢复检查后才标为支持训练。
@@ -109,6 +112,8 @@ python -m unittest discover -s tests -p test_liftcube_import.py -v
 python -m unittest discover -s tests -p test_scripted_liftcube.py -v
 python -m unittest discover -s tests -p test_joint_chain.py -v
 python -m unittest discover -s tests -p test_planar_ee.py -v
+python -m unittest discover -s tests -p test_vla_interfaces.py -v
+python -m unittest discover -s tests -p test_vla_native_backends.py -v
 ```
 
 - 观测/单位/命令映射优先SO101测试，使用替身环境，不等于Isaac验证。

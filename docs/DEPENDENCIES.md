@@ -10,6 +10,12 @@ The visual rule baseline supports two optional kinematics backends: NumPy/SciPy 
 
 The optional [planar EE layer](PLANAR_EE_DEVELOPMENT.md) uses NumPy/SciPy and a matching fixed joint chain, without Placo. Use the existing compatible application environment; neither controller requires demonstration data or trained weights. Robot/TCP calibration, camera/table transforms and workspace validation are external inputs, not supplied by an incomplete template. The simulator-pose camera provider is an explicitly opted-in development path, not the unreleased formal calibration SDK.
 
+## Optional VLA backends
+
+The four inference wrappers live under `course/liftcube/src/starter/models/`. Their CPU boundary tests require NumPy, CPU Torch and PyYAML only; they do not import native model libraries or fetch weights. See [VLA interfaces](VLA_INTERFACES.md#cpu检查--cpu-checks) for an isolated test environment and fixed backend revisions.
+
+Full loading uses separate optional environments: pinned LeRobot v0.4.2 for SmolVLA, author-matched VLASH for SO101 PI05, GR00T N1.5, or the pinned SO101 OpenVLA-OFT implementation. These are not interchangeable installations and are not vendored together. Preserve the simulator's existing dependencies; use a validated inference-service boundary when they cannot coexist. Model, tokenizer, processor, statistics and trained head files must be provisioned locally under their own licenses before loading.
+
 ## Complete source snapshots
 
 | Project | Fixed official source | Included |

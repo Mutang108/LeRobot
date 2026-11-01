@@ -32,9 +32,9 @@ Paths below are relative to `course/liftcube/src/starter/`. These are existing m
 | 评测 / Evaluation | `evaluation/evaluate.py` | 策略加载、共享环境与逐回合结果 / Policy loading, shared environment and episode results |
 | 奖励、日志 / Rewards, logging | `rewards/`, `logging/` | 训练信号与指标，不替换官方成功条件 / Training signals and metrics, not replacement scoring |
 
-`PolicyModel` 已有协议，但 `build_policy()` 当前仍固定构造 `SmallCNNPolicy`，不支持仅改配置就切换 ACT/VLA。加入首个真实模型时再增加最小的显式选择，并补相应接口检查；现在不预建注册器、空模型类或假训练命令。
+`PolicyModel`定义训练与推理协议，`build_policy()`当前仍固定构造`SmallCNNPolicy`。VLA推理包装通过公共评测的`--policy-class`加载，未实现训练协议中的`forward/update/save`。接入训练时再扩展构造器和算法检查，不能仅换配置或类名。
 
-`PolicyModel` defines a protocol, but `build_policy()` currently constructs `SmallCNNPolicy` unconditionally. ACT/VLA cannot be selected merely by changing configuration. Add a minimal explicit selector with the first working adapter and check its contracts; do not prebuild registries, empty model classes or nonfunctional training commands.
+`PolicyModel` covers training and inference; `build_policy()` still constructs SmallCNN. VLA wrappers load through evaluation's `--policy-class` and do not implement training's `forward/update/save`. Training integration requires corresponding builder and algorithm changes, not just another class name.
 
 规则入口`starter.scripts.evaluate_scripted`自行构造规则策略，随后复用共同`run_episode`和六关节环境；它不经`build_policy()`，也没有训练步骤。自研`planar_ee_dev`则从工厂显式选择，要求匹配的三维策略，旧抓取入口会拒绝误接。接入位置和限制分别见[规则指南](SCRIPTED_LIFTCUBE.md)与[末端开发契约](PLANAR_EE_DEVELOPMENT.md)。
 
@@ -42,9 +42,13 @@ The rule CLI constructs a rule policy directly, then reuses `run_episode` and th
 
 ## 3. 新功能放在哪里 / Extension points
 
+已实现的SmolVLA、π₀.₅、GR00T和OFT单front包装及共享关节chunk层见[VLA推理接口](VLA_INTERFACES.md)。公共评测在回合两端及异常退出清空可选策略缓存，不改变seed；各完整模型后端仍需实际环境验收。当前仅CPU接口/mask/加载辅助检查，不声称完整checkpoint、GPU或抓取验收。
+
+See [VLA inference interfaces](VLA_INTERFACES.md) for four single-front wrappers and shared joint chunks. Evaluation resets optional caches at both boundaries and on exceptions without reseeding. Full native backends still require runtime acceptance; CPU interface/mask/loading-helper checks are not model/GPU/grasp acceptance.
+
 | 改动 / Change | 约定 / Convention |
 | --- | --- |
-| ACT / SmolVLA / OpenVLA-OFT / π₀.₅ / GR00T | 真实接入时在 `starter/models/` 增加模型专属包装；复用公共观测/动作与评测 / Add model-specific wrappers under `starter/models/` when implemented; reuse shared contracts and evaluation |
+| ACT / SmolVLA / OpenVLA-OFT / π₀.₅ / GR00T | 模型专属代码在`starter/models/`，四种VLA已有推理包装，ACT待接入；复用公共观测/动作与评测 / Model-specific code belongs under `starter/models/`; four VLA inference wrappers exist, ACT is pending |
 | SFT/BC 与 RL / SFT/BC and RL | 模型前向与优化算法分开，复用或新增实际需要的训练入口 / Separate forward inference from optimization; extend entry points only as needed |
 | residual | 基座预测、残差和实际执行分别记录；同一执行层限位 / Record base, residual and applied actions separately; use the same execution safety layer |
 | 新任务 / New task | 扩展 `envs/` 和任务配置；不复制每种模型一份环境 / Extend environments and task configurations, not an environment copy per model |

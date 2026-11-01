@@ -25,3 +25,25 @@ jobs:
         run: python3 scripts/check_project.py
       - name: Check whitespace
         run: git diff --check
+  vla-cpu:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CUDA_VISIBLE_DEVICES: ''
+      HF_HUB_OFFLINE: '1'
+    steps:
+      - name: Checkout source (v4.2.2)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          lfs: false
+          submodules: false
+      - name: Install isolated CPU test dependencies
+        run: |
+          python3 -m venv .local/vla-cpu
+          .local/vla-cpu/bin/python -m pip install numpy==1.26.4 PyYAML==6.0.3
+          .local/vla-cpu/bin/python -m pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+      - name: Test four VLA interfaces without weights or simulation
+        run: |
+          .local/vla-cpu/bin/python -c "import numpy, torch, yaml; assert torch.version.cuda is None"
+          .local/vla-cpu/bin/python -B -m unittest discover -s tests -p 'test_vla*.py' -v

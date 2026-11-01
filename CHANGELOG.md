@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+新增SmolVLA、SO101版π₀.₅、GR00T N1.5及OpenVLA-OFT单front推理包装与本地加载入口，复用六关节chunk执行、单位校验和回合/任务边界清缓存。补齐加载前参数检查、BF16输出转换、严格加载报告及OFT平台参数；同步接口、依赖和Agent指南，并增加独立CPU接口CI。完整模型、GPU及闭环验收待完成，未增加VLA训练入口。
+
+Add four single-front VLA wrappers/local loaders with shared joint-chunk execution and boundary resets. Validate execution settings before loading, handle BF16 outputs, retain strict-loading reports and expose the OFT platform flag. Update interface/dependency/agent guides and add CPU interface CI. Full-model/GPU/rollout acceptance and VLA training remain separate.
+
 同步首页双语导航、开发/训练入口、架构与依赖、接口/标定边界及来源说明。区分历史v0.1.x源码快照与LiftCube规则开发基准，明确64像素是参考默认值、规则推理无需演示或训练、自研末端层不继承六关节训练验收。运行控制、配置和历史成绩不变。
 
 Synchronize README navigation, development/training routes, architecture, dependencies, calibration contracts and provenance. Distinguish initial v0.1.x snapshots from the LiftCube rule reference, clarify default image sizing and dataset-free rule inference, and keep planar-control acceptance separate from joint training. Runtime behavior, configurations and historical results are unchanged.

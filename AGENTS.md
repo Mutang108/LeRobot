@@ -28,6 +28,7 @@
 | 自研受限末端开发接口 | `starter/envs/planar_ee.py`、`envs/factory.py`、`tests/test_planar_ee.py`及[开发契约](docs/PLANAR_EE_DEVELOPMENT.md)；三维绝对XY/夹爪，非课程正式IK；旧关节策略不得自动接入 |
 | PickOrange 与独立诊断 | `course/scripts/`；[诊断工具 AGENTS](course/scripts/AGENTS.md)、[部署边界](docs/REPRODUCIBILITY.md) |
 | ACT、SmolVLA、OpenVLA-OFT、π₀.₅、GR00T 接入 | 对应任务的策略包装；[架构](docs/ARCHITECTURE.md)、[接口契约](docs/INTERFACE_CONTRACTS.md)、该任务的子级 AGENTS |
+| 单front VLA与chunk生命周期 | `starter/models/`的SmolVLA/PI05/GR00T/OFT包装、共享chunk/backend I/O及[推理接口](docs/VLA_INTERFACES.md)；CPU替身通过不等于真实模型或GPU验收 |
 | 正式多物体任务或真机 | 先确认实际提供的环境、SDK、标定与评分包；[接口契约](docs/INTERFACE_CONTRACTS.md) |
 
 LiftCube 已有 SmallCNN BC/PPO 参考训练与评测，`starter.utils.build_policy()` 仍固定 SmallCNN。上游含 ACT/VLA 实现不代表当前任务已经接通。PickOrange 是另一套任务和运行环境；正式多物体与真机能力必须依据可获取的实现确认。
@@ -77,6 +78,8 @@ git diff --cached --stat
 ```
 
 统一检查覆盖来源 SHA、项目 Python 语法、Markdown 本地链接、海报和软件单测；不启动模拟器。依赖缺失导致的 skip 必须披露，不能当相关功能通过。交付时写明实际命令、结果和未验证部分，不把合成测试写成真实仿真/真机成绩。
+
+修改VLA包装时，另在具备NumPy、CPU Torch和PyYAML的隔离环境运行`python -m unittest discover -s tests -p 'test_vla*.py' -v`；环境说明见[推理接口](docs/VLA_INTERFACES.md)。CI的`vla-cpu`专门执行这些测试，避免纯标准库检查将其全部skip；feature分支推送本身不触发此工作流，PR、main推送或手动触发才运行。
 
 `python scripts/inspect_plan.py configs/experiment-plan.toml --print-config` 只检查计划；退出码 0 为静态通过、2 为无效、3 为模板未填齐，均不表示训练已运行。
 

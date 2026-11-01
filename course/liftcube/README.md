@@ -6,9 +6,9 @@ A starting point for picking up a tabletop cube, with an environment adapter, de
 
 ## 当前状态 / Status
 
-六关节环境交互与BC/PPO参考训练基础已接入，规则脚本可独立于训练使用。候选演示尚未通过正式BC准入，ACT/VLA的LiftCube适配仍在开发。训练和恢复用法见[训练指南](TRAINING.md)，任务迁移与采集方案见[开发路线](../../docs/LIFTCUBE_TRANSFER.md)。
+六关节环境交互与BC/PPO参考训练基础已接入，规则脚本可独立于训练使用。候选演示尚未通过正式BC准入；[四种VLA的单front包装与共享chunk层](../../docs/VLA_INTERFACES.md)已有CPU接口检查，完整模型及GPU/闭环尚未验收，ACT接入仍在开发。训练和恢复用法见[训练指南](TRAINING.md)，任务迁移与采集方案见[开发路线](../../docs/LIFTCUBE_TRANSFER.md)。
 
-Joint-environment interaction and BC/PPO reference foundations are connected; the rule runner is independent of training. Candidate demonstrations are not yet accepted for formal BC, and LiftCube ACT/VLA integration remains in development. See the [training guide](TRAINING.md) and [task-transfer and collection plan](../../docs/LIFTCUBE_TRANSFER.md).
+Joint-environment interaction and BC/PPO reference foundations are connected; the rule runner is independent of training. Candidate demonstrations are not accepted for formal BC. [Four single-front VLA wrappers/shared chunks](../../docs/VLA_INTERFACES.md) have CPU interface checks, not full-model/GPU/rollout acceptance; ACT integration remains in development. See the [training guide](TRAINING.md) and [task-transfer plan](../../docs/LIFTCUBE_TRANSFER.md).
 
 | 环节 / Component | 当前实现 / Implementation |
 | --- | --- |

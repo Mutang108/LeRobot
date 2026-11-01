@@ -783,7 +783,53 @@
  from starter.envs.lift_cube import shutdown_sim_app
  from starter.interfaces.model import SmallCNNPolicy
  from starter.interfaces.observation import Observation
-@@ -65,8 +68,13 @@
+@@ -25,6 +28,8 @@
+     parser.add_argument("--deterministic", action="store_true", default=None)
+     parser.add_argument("--policy-class", type=str, default=None,
+                         help="Custom policy loader as package.module:ClassName; defaults to SmallCNNPolicy.")
++    parser.add_argument("--robot_platform", choices=("SO101",), default=None,
++                        help="Select SO101 constants in the pinned OFT backend via its process CLI.")
+     return parser.parse_args(argv)
+ 
+ 
+@@ -44,6 +49,36 @@
+ 
+ 
+ def run_episode(
++    env: Any,
++    policy: PolicyModel,
++    *,
++    seed: int,
++    episode_id: int,
++    deterministic: bool,
++    checkpoint: str | None,
++    max_episode_steps: int = 640,
++) -> EpisodeRecord:
++    """Clear optional policy caches at both boundaries, including exceptions.
++
++    Legacy stateless policies need no reset method. A reset must not reseed RNG.
++    """
++    if max_episode_steps <= 0:
++        raise ValueError("max_episode_steps must be positive")
++    reset = getattr(policy, 'reset', None)
++    if reset is not None and not callable(reset):
++        raise TypeError('policy.reset must be callable')
++    if reset is not None:
++        reset()
++    try:
++        return _run_episode(env, policy, seed=seed, episode_id=episode_id,
++                            deterministic=deterministic, checkpoint=checkpoint,
++                            max_episode_steps=max_episode_steps)
++    finally:
++        if reset is not None:
++            reset()
++
++
++def _run_episode(
+     env: Any,
+     policy: PolicyModel,
+     *,
+@@ -65,8 +100,13 @@
      reason = ""
      success = False
      failure_class = "unknown"
@@ -798,7 +844,7 @@
          obs, reward, terminated, truncated, info = env.step(action)
          total += float(reward)
          length += 1
-@@ -148,7 +156,9 @@
+@@ -148,7 +188,9 @@
          env_backend="lift_cube",
          config_path=cfg.get("_config_path"),
          checkpoint=checkpoint,
@@ -922,6 +968,611 @@
          )
          model.load_state_dict(payload["state_dict"])
          model.to(device)
+--- /dev/null
++++ b/src/starter/models/__init__.py
+@@ -0,0 +1 @@
++"""Optional policy backends; importing this package does not load a model."""
+--- /dev/null
++++ b/src/starter/models/backend_io.py
+@@ -0,0 +1,55 @@
++"""Local backend descriptors and explicit native joint representations."""
++import json
++from pathlib import Path
++
++import numpy as np
++
++from starter.interfaces.action import JOINT_NAMES, motor_to_degrees
++from starter.interfaces.observation import ObservationSpec
++from .joint_chunk import execution_spec, front_inputs
++
++
++def read_adapter(path, backend):
++    path = Path(path).resolve()
++    options = json.loads(path.read_text(encoding='utf-8'))
++    if options['backend'] != backend or options['joint_names'] != list(JOINT_NAMES):
++        raise ValueError('Wrong backend or SO101 joint order')
++    for key in ('model_revision', 'backend_revision', 'calibration_source'):
++        if not isinstance(options.get(key), str) or not options[key].strip():
++            raise ValueError(f'Record {key}')
++    model = (path.parent / options['model_path']).resolve()
++    if not model.is_dir():
++        raise ValueError('model_path must be an existing local directory')
++    if options['joint_units'] not in ('motor', 'arm_degrees_gripper_motor'):
++        raise ValueError('Unknown joint representation; EEF policies are not SO101 joint policies')
++    execution_spec(task=options['task'], execute_steps=options['execute_steps'],
++        frequency_hz=options['frequency_hz'], output_units=options['joint_units'],
++        observation_spec=ObservationSpec.from_dict(options['observation_spec']))
++    return path, options, model
++
++
++def native_front(observation, spec, task, image_key, units):
++    batch = front_inputs(observation, spec, task, image_key)
++    if units == 'arm_degrees_gripper_motor':
++        motors = batch['observation.state']
++        state = motor_to_degrees(motors)
++        state[5] = motors[5]
++        batch['observation.state'] = state
++    elif units != 'motor':
++        raise ValueError('Unsupported input joint units')
++    return batch
++
++
++def tensor_chunk(output):
++    """Unbatch a native tensor; never trim padded joints at our boundary."""
++    array = output.detach().float().cpu().numpy()  # NumPy has no native bfloat16 dtype.
++    if array.ndim != 3 or array.shape[0] != 1 or array.shape[-1] != 6:
++        raise ValueError('Expected native [1, time, 6] output')
++    return array[0]
++
++
++def require_complete_load(info):
++    if any(info.get(key) for key in ('missing_keys', 'unexpected_keys', 'mismatched_keys', 'error_msgs')):
++        error = ValueError('Incomplete backend weight load; inspect exception.loading_info')
++        error.loading_info = info
++        raise error
+--- /dev/null
++++ b/src/starter/models/gr00t.py
+@@ -0,0 +1,83 @@
++"""Single-front GR00T N1.5 adapter using native modality transforms/statistics."""
++import json
++
++import numpy as np
++
++from starter.interfaces.observation import ObservationSpec
++from .joint_chunk import JointChunkPolicy
++from .backend_io import native_front, read_adapter, require_complete_load
++
++
++def load_groot_weights(model_class, model_path, device):
++    import torch
++    from transformers import PreTrainedModel
++    # N1.5 overrides from_pretrained and assumes a model-only return. Call the
++    # HF base loader to obtain loading_info without downloading or retuning.
++    loaded, info = PreTrainedModel.from_pretrained.__func__(
++        model_class, model_path, local_model_path=model_path, torch_dtype=torch.bfloat16,
++        local_files_only=True, output_loading_info=True)
++    require_complete_load(info)
++    return loaded.eval().requires_grad_(False).to(device)
++
++
++class Gr00tFrontPolicy(JointChunkPolicy):
++    def __init__(self, policy, *, task, image_key='video.webcam', joint_units='motor',
++                 observation_spec=None, execute_steps=16, frequency_hz=30):
++        self.policy, self.image_key, self.joint_units = policy, image_key, joint_units
++        modality = policy.get_modality_config()
++        expected = {'video': [image_key], 'state': ['state.single_arm', 'state.gripper'],
++                    'action': ['action.single_arm', 'action.gripper'],
++                    'language': ['annotation.human.task_description']}
++        for key, names in expected.items():
++            if list(modality[key].modality_keys) != names:
++                raise ValueError('GR00T modality keys must match the trained single-front SO101 contract')
++        if any(list(modality[key].delta_indices) != [0] for key in ('video', 'state', 'language')):
++            raise ValueError('Historical observations are not available in this adapter')
++        self.horizon = len(modality['action'].delta_indices)
++        if list(modality['action'].delta_indices) != list(range(self.horizon)):
++            raise ValueError('GR00T actions must use consecutive decision steps')
++        super().__init__(self._predict, task=task, observation_spec=observation_spec, execute_steps=execute_steps,
++                         frequency_hz=frequency_hz, output_units=joint_units,
++                         reset_backend=getattr(policy, 'reset', None))
++
++    def _predict(self, observation, task):
++        import torch
++        data = native_front(observation, self.observation_spec, task, self.image_key, self.joint_units)
++        q = data['observation.state']
++        payload = {self.image_key: observation.image.copy()[None],
++                   'state.single_arm': q[None, :5], 'state.gripper': q[None, 5:],
++                   'annotation.human.task_description': [task]}
++        with torch.inference_mode():
++            output = self.policy.get_action(payload)  # Native transforms unnormalize outputs.
++        arm, jaw = np.asarray(output['action.single_arm']), np.asarray(output['action.gripper'])
++        if arm.shape != (self.horizon, 5) or jaw.shape != (self.horizon, 1):
++            raise ValueError('Expected unbatched [horizon,5] arm and [horizon,1] jaw')
++        return np.concatenate((arm, jaw), axis=-1)
++
++    @classmethod
++    def load(cls, path, device='cpu'):
++        path, options, model = read_adapter(path, 'gr00t-n1.5')
++        metadata = json.loads((model / 'experiment_cfg/metadata.json').read_text(encoding='utf-8'))
++        tag = options['embodiment_tag']
++        if tag not in metadata:
++            raise ValueError('Checkpoint lacks trained SO101 embodiment metadata')
++        from transformers.utils.hub import is_offline_mode
++        if not is_offline_mode():
++            raise ValueError('Set HF_HUB_OFFLINE=1 before importing the backend; pre-cache backbone assets')
++        from gr00t.experiment.data_config import load_data_config
++        from gr00t.model.policy import Gr00tPolicy
++        from gr00t.model.gr00t_n1 import GR00T_N1_5
++        cfg = load_data_config(options['data_config'])
++        if len(cfg.video_keys) != 1:
++            raise ValueError('Do not use a dual-camera data config for single-front inference')
++        raw = json.loads((model / 'config.json').read_text(encoding='utf-8'))
++        if raw['action_head_cfg']['action_horizon'] != len(cfg.action_indices):
++            raise ValueError('Action horizon mismatch; do not recreate a random action head')
++        class CheckedPolicy(Gr00tPolicy):
++            def _load_model(self, model_path):
++                self.model = load_groot_weights(GR00T_N1_5, model_path, self.device)
++        policy = CheckedPolicy(model_path=str(model), embodiment_tag=tag, modality_config=cfg.modality_config(),
++                               modality_transform=cfg.transform(), device=device)
++        return cls(policy, task=options['task'], image_key=cfg.video_keys[0], joint_units=options['joint_units'],
++                   observation_spec=ObservationSpec.from_dict(options['observation_spec']),
++                   execute_steps=options['execute_steps'], frequency_hz=options['frequency_hz'])
+--- /dev/null
++++ b/src/starter/models/joint_chunk.py
+@@ -0,0 +1,119 @@
++"""Shared single-front inputs and bounded joint-chunk execution, without GT."""
++from collections import deque
++from dataclasses import replace
++from numbers import Real
++
++import numpy as np
++
++from starter.interfaces.action import ActionSpec, degrees_to_motor, validate_action
++from starter.interfaces.observation import ObservationSpec
++
++
++def validate_front_spec(spec):
++    if (spec.camera != 'front' or spec.proprio_dim not in (18, 21)
++            or spec.image_layout != 'HWC' or spec.image_dtype != 'uint8'
++            or len(spec.image_shape) != 3 or spec.image_shape[-1] != 3
++            or any(isinstance(n, bool) or not isinstance(n, int) or n <= 0 for n in spec.image_shape)):
++        raise ValueError('Expected single front and the canonical 18/21-D proprio layout')
++    if spec.proprio_layout != ObservationSpec().proprio_layout:
++        raise ValueError('Unknown proprio ordering')
++
++
++def execution_spec(*, task, execute_steps, frequency_hz, observation_spec=None, output_units='motor'):
++    """Validate cheap execution contracts before any heavyweight model loading."""
++    if isinstance(execute_steps, bool) or not isinstance(execute_steps, int) or execute_steps < 1:
++        raise ValueError('execute_steps must be a positive integer')
++    if not isinstance(task, str) or not task.strip():
++        raise ValueError('A nonempty task is required')
++    if (isinstance(frequency_hz, bool) or not isinstance(frequency_hz, Real)
++            or not np.isfinite(frequency_hz) or frequency_hz <= 0):
++        raise ValueError('frequency_hz must be finite and positive')
++    if output_units not in ('motor', 'arm_degrees_gripper_motor'):
++        raise ValueError('Unsupported action units')
++    spec = observation_spec or replace(ObservationSpec(), control_hz=float(frequency_hz))
++    validate_front_spec(spec)
++    if spec.control_hz != float(frequency_hz):
++        raise ValueError('Observation and action decision clocks must match')
++    return spec
++
++
++def front_inputs(observation, spec, task, image_key):
++    """Return only RGB, measured q and caller-supplied language, never metadata."""
++    validate_front_spec(spec)
++    observation.validate(spec)
++    if not isinstance(task, str) or not task.strip():
++        raise ValueError('A nonempty task is required')
++    return {
++        image_key: np.ascontiguousarray(observation.image.transpose(2, 0, 1), dtype=np.float32) / 255,
++        'observation.state': observation.proprio[:6].copy(),
++        'task': task,
++    }
++
++
++def joint_chunk_to_motor(chunk, units='motor'):
++    """Decode explicit SO101 units; never truncate dimensions or clip targets."""
++    chunk = np.asarray(chunk, dtype=np.float32)
++    if chunk.ndim != 2 or chunk.shape[0] == 0 or chunk.shape[1] != 6:
++        raise ValueError('Expected a nonempty [time, 6] action chunk')
++    if not np.isfinite(chunk).all():
++        raise ValueError('Action chunk contains nonfinite values')
++    if units == 'arm_degrees_gripper_motor':
++        converted = degrees_to_motor(chunk)
++        converted[:, 5] = chunk[:, 5]  # Gripper is not an angle in this contract.
++        chunk = converted
++    elif units != 'motor':
++        raise ValueError('Unsupported action units; end-effector commands require another adapter')
++    return validate_action(chunk, ActionSpec()).copy()
++
++
++class JointChunkPolicy:
++    """Inference-only queue shared by explicit joint-space VLA backends.
++
++    predict(observation, task) returns raw, *unnormalized* [time, 6] targets.
++    reset_backend must clear backend caches, not reseed random streams.
++    """
++
++    def __init__(self, predict, *, task, observation_spec=None, execute_steps=20,
++                 frequency_hz=30, output_units='motor', reset_backend=None):
++        self.observation_spec = execution_spec(task=task, execute_steps=execute_steps,
++            frequency_hz=frequency_hz, observation_spec=observation_spec, output_units=output_units)
++        if not callable(predict) or (reset_backend is not None and not callable(reset_backend)):
++            raise TypeError('predict and optional reset_backend must be callable')
++        self.predict = predict
++        self.task = task
++        self.action_spec = replace(ActionSpec(), frequency_hz=float(frequency_hz))
++        self.execute_steps = execute_steps
++        self.output_units = output_units
++        self.reset_backend = reset_backend
++        self._actions = deque()
++        self.last_raw_chunk = None
++        self.last_motor_chunk = None
++
++    def reset(self):
++        self._actions.clear()
++        self.last_raw_chunk = self.last_motor_chunk = None
++        if self.reset_backend is not None:
++            self.reset_backend()
++
++    def set_task(self, task):
++        if not isinstance(task, str) or not task.strip():
++            raise ValueError('A nonempty task is required')
++        if task != self.task:
++            self.reset()
++            self.task = task
++
++    def act(self, observation, deterministic=False):
++        # deterministic is a common runner argument, not permission to reseed a VLA.
++        try:
++            observation.validate(self.observation_spec)
++            if not self._actions:
++                raw = np.asarray(self.predict(observation, self.task), dtype=np.float32)
++                motor = joint_chunk_to_motor(raw, self.output_units)
++                if len(motor) < self.execute_steps:
++                    raise ValueError('Predicted chunk is shorter than execute_steps')
++                self.last_raw_chunk, self.last_motor_chunk = raw.copy(), motor.copy()
++                self._actions.extend(row.copy() for row in motor[:self.execute_steps])
++            return self._actions.popleft().copy()
++        except Exception:
++            self.reset()
++            raise
+--- /dev/null
++++ b/src/starter/models/openvla_oft.py
+@@ -0,0 +1,104 @@
++"""SO101 continuous OFT adapter; never use vanilla 7-D EEF decoding."""
++import json
++from types import SimpleNamespace
++
++import numpy as np
++
++from starter.interfaces.observation import ObservationSpec
++from .joint_chunk import JointChunkPolicy
++from .backend_io import native_front, read_adapter, require_complete_load
++
++
++def check_statistics(stats):
++    for modality in ('action', 'proprio'):
++        low, high = (np.asarray(stats[modality][name], dtype=np.float32) for name in ('min', 'max'))
++        mask = np.asarray(stats[modality].get('mask', [True]*6))
++        if (low.shape != (6,) or high.shape != (6,) or not np.isfinite([low, high]).all()
++                or np.any(high <= low) or mask.shape != (6,) or mask.dtype != np.bool_ or not mask.all()):
++            raise ValueError('OFT BOUNDS requires finite ordered six-channel ranges and all-channel masks')
++
++
++class OpenVLAOFTFrontPolicy(JointChunkPolicy):
++    def __init__(self, model, processor, action_head, proprio_projector, predict_action, *,
++                 unnorm_key, task, joint_units, center_crop, chunk_size, observation_spec=None,
++                 execute_steps=8, frequency_hz=30):
++        if action_head is None or proprio_projector is None:
++            raise ValueError('A trained continuous head and proprio projector are required')
++        if isinstance(chunk_size, bool) or not isinstance(chunk_size, int) or chunk_size < 1:
++            raise ValueError('chunk_size must be a positive integer')
++        self.chunk_size = chunk_size
++        if not isinstance(center_crop, bool):
++            raise ValueError('center_crop must be a boolean')
++        check_statistics(model.norm_stats[unnorm_key])
++        self.model, self.processor = model, processor
++        self.action_head, self.proprio_projector = action_head, proprio_projector
++        self.predict_action = predict_action
++        self.cfg = SimpleNamespace(num_images_in_input=1, use_proprio=True,
++                                   unnorm_key=unnorm_key, center_crop=center_crop, use_film=False)
++        self.joint_units = joint_units
++        super().__init__(self._predict, task=task, observation_spec=observation_spec, execute_steps=execute_steps,
++                         frequency_hz=frequency_hz, output_units=joint_units)
++
++    def _predict(self, observation, task):
++        data = native_front(observation, self.observation_spec, task, 'front', self.joint_units)
++        payload = {'full_image': observation.image.copy(), 'additional_images': [],
++                   'state': data['observation.state']}
++        output = self.predict_action(self.cfg, self.model, self.processor, payload, task,
++                                     action_head=self.action_head, proprio_projector=self.proprio_projector,
++                                     use_film=False)
++        chunk = np.asarray(output, dtype=np.float32)  # Upstream already unnormalizes actions.
++        if chunk.shape != (self.chunk_size, 6):
++            raise ValueError('OFT output horizon/dimensions differ from the loaded SO101 contract')
++        return chunk
++
++    @classmethod
++    def load(cls, path, device='cpu'):
++        path, options, model_path = read_adapter(path, 'openvla-oft-so101')
++        if not isinstance(options['center_crop'], bool):
++            raise ValueError('center_crop must be a boolean')
++        if options['trained_camera_keys'] != ['front']:
++            raise ValueError('A three-camera checkpoint cannot be relabeled as single-front')
++        files = [(path.parent / options[key]).resolve() for key in ('action_head_path', 'proprio_projector_path')]
++        if not all(file.is_file() for file in files):
++            raise ValueError('Missing trained action head or proprio projector')
++        # These constants are selected before importing dependent OFT model modules.
++        from prismatic.vla.constants import ACTION_DIM, PROPRIO_DIM, NUM_ACTIONS_CHUNK, ACTION_PROPRIO_NORMALIZATION_TYPE
++        if (ACTION_DIM, PROPRIO_DIM, NUM_ACTIONS_CHUNK) != (6, 6, options['chunk_size']):
++            raise ValueError('Initialize the pinned OFT backend with SO101 constants before loading')
++        if getattr(ACTION_PROPRIO_NORMALIZATION_TYPE, 'value', ACTION_PROPRIO_NORMALIZATION_TYPE) != 'bounds':
++            raise ValueError('This adapter supports the SO101 BOUNDS recipe only')
++        import torch
++        from prismatic.extern.hf.modeling_prismatic import OpenVLAForActionPrediction
++        from prismatic.extern.hf.processing_prismatic import PrismaticProcessor
++        from prismatic.models.action_heads import L1RegressionActionHead
++        from prismatic.models.projectors import ProprioProjector
++        from experiments.robot.openvla_utils import get_vla_action
++        # Fail before allocating weights on a mismatched device.
++        from experiments.robot import openvla_utils
++        if str(openvla_utils.DEVICE) != str(torch.device(device)):
++            raise ValueError('OFT helper device differs from requested device; use a matching isolated backend')
++        model, info = OpenVLAForActionPrediction.from_pretrained(str(model_path), local_files_only=True,
++                            torch_dtype=torch.bfloat16, output_loading_info=True)
++        require_complete_load(info)
++        model.eval().requires_grad_(False).to(device)
++        model.vision_backbone.set_num_images_in_input(1)
++        stats_file = model_path / 'dataset_statistics.json'
++        if stats_file.is_file():
++            model.norm_stats = json.loads(stats_file.read_text(encoding='utf-8'))
++        check_statistics(model.norm_stats[options['unnorm_key']])
++        processor = PrismaticProcessor.from_pretrained(str(model_path), local_files_only=True)
++        head = L1RegressionActionHead(input_dim=model.llm_dim, hidden_dim=model.llm_dim, action_dim=6)
++        projector = ProprioProjector(llm_dim=model.llm_dim, proprio_dim=6)
++        for component, file in zip((head, projector), files):
++            if file.suffix == '.safetensors':
++                from safetensors.torch import load_file
++                state = load_file(str(file), device='cpu')
++            else:
++                state = torch.load(file, map_location='cpu', weights_only=True)
++            component.load_state_dict(state, strict=True)
++            component.eval().requires_grad_(False).to(device=device, dtype=torch.bfloat16)
++        return cls(model, processor, head, projector, get_vla_action,
++                   unnorm_key=options['unnorm_key'], task=options['task'], joint_units=options['joint_units'],
++                   center_crop=options['center_crop'], chunk_size=options['chunk_size'],
++                   observation_spec=ObservationSpec.from_dict(options['observation_spec']),
++                   execute_steps=options['execute_steps'], frequency_hz=options['frequency_hz'])
+--- /dev/null
++++ b/src/starter/models/pi05.py
+@@ -0,0 +1,111 @@
++"""SO101 VLASH PI05 with embedded statistics; not the stock HF PI05 graph."""
++from copy import deepcopy
++import json
++
++from starter.interfaces.observation import ObservationSpec
++from .joint_chunk import JointChunkPolicy
++from .backend_io import native_front, read_adapter, tensor_chunk
++
++FRONT_KEY = 'observation.images.base_0_rgb'
++
++
++def single_front_config(config):
++    cfg = deepcopy(config)
++    if not cfg.state_cond or cfg.input_features['observation.state'].shape != (6,) or cfg.output_features['action'].shape != (6,):
++        raise ValueError('Expected state-conditioned, six-channel SO101 PI05')
++    keys = list(cfg.image_features)
++    if len(keys) != 3 or keys[0] != FRONT_KEY:
++        raise ValueError('Expected the original three-slot PI05 camera order')
++    cfg.input_features = {k: v for k, v in cfg.input_features.items() if k not in keys or k == FRONT_KEY}
++    cfg.empty_cameras = 2
++    if cfg.n_obs_steps != 1 or cfg.compile_model or cfg.fuse_qkv or cfg.fuse_gate_up:
++        raise ValueError('Only the unfused single-observation inference graph is supported')
++    return cfg
++
++
++def strict_author_state(policy, weights):
++    """Map author names and restore only exact aliases already sharing model storage."""
++    import torch
++    rules = (('action_in_proj.', 'model.suffix_embedder.action_in_proj.'),
++             ('action_out_proj.', 'model.action_out_proj.'),
++             ('time_mlp_in.', 'model.suffix_embedder.time_mlp_in.'),
++             ('time_mlp_out.', 'model.suffix_embedder.time_mlp_out.'),
++             ('state_proj.', 'model.suffix_embedder.state_proj.'),
++             ('state_mlp_in.', 'model.suffix_embedder.state_mlp_in.'),
++             ('state_mlp_out.', 'model.suffix_embedder.state_mlp_out.'),
++             ('paligemma_with_expert.gemma_expert.', 'model.action_expert.'),
++             ('paligemma_with_expert.paligemma.', 'model.vlm.'))
++    mapped = {}
++    for key, tensor in weights.items():
++        new = next((after + key[len(before):] for before, after in rules if key.startswith(before)), key)
++        if new in mapped:
++            raise ValueError('Duplicate remapped PI05 tensor')
++        mapped[new] = tensor
++    expected = policy.state_dict()
++    def storage(t):
++        return (t.untyped_storage().data_ptr(), t.storage_offset(), tuple(t.shape), tuple(t.stride()), t.dtype)
++    groups = {}
++    for key in mapped.keys() & expected.keys():
++        if mapped[key].shape != expected[key].shape:
++            raise ValueError('PI05 tensor shape mismatch')
++        group = groups.setdefault(storage(expected[key]), [])
++        if group and not torch.equal(mapped[group[0]], mapped[key]):
++            raise ValueError('Conflicting checkpoint values for a model storage alias')
++        group.append(key)
++    for key in expected.keys() - mapped.keys():
++        aliases = groups.get(storage(expected[key]), [])
++        if aliases:
++            mapped[key] = mapped[aliases[0]]
++    if mapped.keys() != expected.keys():
++        raise ValueError('Missing or unexpected PI05 tensors')
++    for key, value in mapped.items():
++        if 'buffer_' in key or 'normalize_' in key or 'unnormalize_' in key:
++            if not torch.isfinite(value).all() or ('std' in key and torch.any(value <= 0)):
++                raise ValueError('Invalid embedded normalization buffer')
++    policy.load_state_dict(mapped, strict=True)
++
++
++class Pi05FrontPolicy(JointChunkPolicy):
++    def __init__(self, policy, *, task, observation_spec=None, execute_steps=20, frequency_hz=30):
++        self.policy = policy
++        super().__init__(self._predict, task=task, observation_spec=observation_spec,
++                         execute_steps=execute_steps, frequency_hz=frequency_hz, reset_backend=policy.reset)
++
++    def _predict(self, observation, task):
++        import torch
++        batch = native_front(observation, self.observation_spec, task, FRONT_KEY, 'motor')
++        device = self.policy.config.device
++        batch = {key: torch.from_numpy(value).unsqueeze(0).to(device) if key != 'task' else [value]
++                 for key, value in batch.items()}
++        with torch.inference_mode():
++            output = self.policy.predict_action_chunk(batch)  # Own embedded normalization both ways.
++        chunk = tensor_chunk(output)
++        if len(chunk) != self.policy.config.n_action_steps:
++            raise ValueError('PI05 output horizon differs from its loaded configuration')
++        return chunk
++
++    @classmethod
++    def load(cls, path, device='cpu'):
++        path, options, model = read_adapter(path, 'pi05-vlash')
++        if options['joint_units'] != 'motor':
++            raise ValueError('This SO101 PI05 contract requires motor units')
++        # VLASH hardcodes its tokenizer name: require an explicitly offline backend/cache.
++        from transformers.utils.hub import is_offline_mode
++        if not is_offline_mode():
++            raise ValueError('Set HF_HUB_OFFLINE=1 before importing the backend; pre-cache the authorized tokenizer')
++        import draccus
++        import torch
++        from safetensors.torch import load_file
++        from vlash.policies.pi05.configuration_pi05 import PI05Config
++        from vlash.policies.pi05.modeling_pi05 import PI05Policy
++        config = json.loads((model / 'config.json').read_text(encoding='utf-8'))
++        if config.pop('type') != 'pi05':
++            raise ValueError('Not a PI05 checkpoint')
++        cfg = single_front_config(draccus.decode(PI05Config, config))
++        cfg.device = 'cpu'
++        policy = PI05Policy(cfg)
++        strict_author_state(policy, load_file(str(model / 'model.safetensors'), device='cpu'))
++        policy.eval().requires_grad_(False).to(device)
++        policy.config.device = device
++        return cls(policy, task=options['task'], observation_spec=ObservationSpec.from_dict(options['observation_spec']),
++                   execute_steps=options['execute_steps'], frequency_hz=options['frequency_hz'])
+--- /dev/null
++++ b/src/starter/models/smolvla.py
+@@ -0,0 +1,111 @@
++"""Single-front SmolVLA inference adapter for the pinned LeRobot v0.4.2 API."""
++from copy import deepcopy
++import json
++from pathlib import Path
++
++import numpy as np
++
++from starter.interfaces.action import JOINT_NAMES
++from starter.interfaces.observation import ObservationSpec
++from .joint_chunk import JointChunkPolicy, execution_spec, front_inputs
++from .backend_io import tensor_chunk
++
++
++def single_front_config(config, image_key):
++    """Keep one real image and request backend-generated masked empty slots."""
++    config = deepcopy(config)
++    if config.input_features['observation.state'].shape != (6,) or config.output_features['action'].shape != (6,):
++        raise ValueError('SmolVLA checkpoint must use six state/action channels')
++    image_keys = list(config.image_features)
++    if not image_keys or image_key != image_keys[0]:
++        raise ValueError('Front must bind to the first trained camera slot')
++    if config.n_obs_steps != 1 or config.adapt_to_pi_aloha or config.use_delta_joint_actions_aloha:
++        raise ValueError('Only single-observation, absolute SO101 joint control is supported')
++    if getattr(config, 'rtc_config', None) is not None:
++        raise ValueError('RTC is not supported by this synchronous adapter')
++    config.input_features = {key: feature for key, feature in config.input_features.items()
++                             if key not in image_keys or key == image_key}
++    config.empty_cameras = len(image_keys) - 1
++    return config
++
++
++def normalization_stats(document):
++    """Require explicit six-channel checkpoint/training statistics, not identity fallback."""
++    if not isinstance(document.get('source'), str) or not document['source'].strip():
++        raise ValueError('Normalization statistics need a recorded source')
++    result = {}
++    for key in ('observation.state', 'action'):
++        result[key] = {}
++        for field in ('mean', 'std'):
++            value = np.asarray(document['stats'][key][field], dtype=np.float32)
++            if value.shape != (6,) or not np.isfinite(value).all():
++                raise ValueError('Expected finite six-channel mean/std statistics')
++            if field == 'std' and np.any(value <= 0):
++                raise ValueError('Standard deviation must be positive')
++            result[key][field] = value
++    return result
++
++
++class SmolVLAFrontPolicy(JointChunkPolicy):
++    """Backend-injected constructor supports CPU fixtures without model downloads."""
++
++    def __init__(self, policy, preprocessor, postprocessor, *, task, image_key,
++                 observation_spec=None, execute_steps=20, frequency_hz=30):
++        self.policy, self.preprocessor, self.postprocessor = policy, preprocessor, postprocessor
++        self.image_key = image_key
++        super().__init__(self._predict, task=task, observation_spec=observation_spec,
++                         execute_steps=execute_steps, frequency_hz=frequency_hz,
++                         reset_backend=policy.reset)
++
++    def _predict(self, observation, task):
++        import torch
++        batch = front_inputs(observation, self.observation_spec, task, self.image_key)
++        batch = {key: torch.from_numpy(value) if isinstance(value, np.ndarray) else value
++                 for key, value in batch.items()}
++        with torch.inference_mode():
++            output = self.postprocessor(self.policy.predict_action_chunk(self.preprocessor(batch)))
++        actions = tensor_chunk(output)
++        if len(actions) != self.policy.config.n_action_steps:
++            raise ValueError('SmolVLA output horizon differs from its loaded configuration')
++        return actions
++
++    @classmethod
++    def load(cls, path, device='cpu'):
++        """Load a local adapter JSON and trusted local weights; never download implicitly."""
++        path = Path(path).resolve()
++        options = json.loads(path.read_text(encoding='utf-8'))
++        if options['joint_names'] != list(JOINT_NAMES) or options['joint_units'] != 'motor':
++            raise ValueError('Adapter must explicitly match SO101 joint order and motor units')
++        for key in ('model_revision', 'calibration_source'):
++            if not isinstance(options.get(key), str) or not options[key].strip():
++                raise ValueError(f'Record {key}')
++        spec = execution_spec(task=options['task'], execute_steps=options['execute_steps'],
++            frequency_hz=options['frequency_hz'],
++            observation_spec=ObservationSpec.from_dict(options['observation_spec']))
++        model = (path.parent / options['model_path']).resolve()
++        vlm = (path.parent / options['vlm_path']).resolve()
++        if not model.is_dir() or not vlm.is_dir():
++            raise ValueError('model_path and vlm_path must be existing local directories')
++        stats = normalization_stats(options['normalization'])
++        import torch
++        from lerobot.configs.policies import PreTrainedConfig
++        from lerobot.policies.smolvla.configuration_smolvla import SmolVLAConfig
++        from lerobot.policies.smolvla.modeling_smolvla import SmolVLAPolicy
++        from lerobot.policies.smolvla.processor_smolvla import make_smolvla_pre_post_processors
++        cfg = PreTrainedConfig.from_pretrained(str(model), local_files_only=True)
++        if not isinstance(cfg, SmolVLAConfig):
++            raise ValueError('Expected a SmolVLA checkpoint')
++        cfg = single_front_config(cfg, options['image_key'])
++        for key, expected in (('STATE', 'MEAN_STD'), ('ACTION', 'MEAN_STD'), ('VISUAL', 'IDENTITY')):
++            mode = cfg.normalization_mapping[key]
++            if getattr(mode, 'value', mode) != expected:
++                raise ValueError('Expected state/action MEAN_STD and visual IDENTITY normalization')
++        cfg.device, cfg.load_vlm_weights, cfg.vlm_model_name = device, False, str(vlm)
++        policy = SmolVLAPolicy.from_pretrained(str(model), config=cfg, local_files_only=True, strict=True)
++        policy.eval()
++        pre, post = make_smolvla_pre_post_processors(cfg, dataset_stats={
++            key: {name: torch.from_numpy(value) for name, value in fields.items()}
++            for key, fields in stats.items()})
++        return cls(policy, pre, post, task=options['task'], image_key=options['image_key'],
++                   observation_spec=spec,
++                   execute_steps=options['execute_steps'], frequency_hz=options['frequency_hz'])
 --- /dev/null
 +++ b/src/starter/training/checkpoint.py
 @@ -0,0 +1,106 @@
