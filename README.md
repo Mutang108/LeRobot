@@ -119,6 +119,7 @@ VLA 强化学习实现参考 [RLinf](docs/RLINF.md)，目前尚未接入本项�
 - [LiftCube与PickOrange：资源与适配状态表](docs/TASKS.md)
 - [模型权重与专家演示获取](docs/RESOURCES.md)
 - [按任务进行教师采集、训练和评测](docs/TRAIN_AND_EVALUATE.md)
+- [SwanLab训练与评测曲线](docs/SWANLAB.md)：仅数值与脱敏配置，默认离线，在线使用私有项目
 - [LiftCube 源码、镜像与运行方法](course/liftcube/README.md)
 - [PickOrange 源码、独立环境与诊断入口](docs/PICK_ORANGE.md)
 - [视觉规则基准、标定与后续适配](docs/SCRIPTED_LIFTCUBE.md)

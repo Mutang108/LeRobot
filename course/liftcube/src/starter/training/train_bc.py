@@ -99,25 +99,26 @@ def main(argv: list[str] | None = None) -> dict:
     saved_path = training_path(cfg)
     if not args.resume and Path(saved_path).exists():
         raise FileExistsError(f"Existing training checkpoint: {saved_path}; use --resume or a new output path")
-    writer = open_writer(cfg)
     progress = load_training(args.resume, model, identity) if args.resume else {"epoch": 0, "updates": 0, "history": []}
     history = progress["history"]
+    writer = open_writer(cfg, "bc", start_step=int(progress["updates"]), resumed=bool(args.resume))
 
     def checkpoint_epoch(epoch, row):
         history.append(row)
         save_training(saved_path, model, identity, {"epoch": epoch, "updates": row["optimizer_steps"], "history": history})
         log_row(writer, "bc", row, row["optimizer_steps"])
 
-    trainer.fit(
-        train_loader,
-        epochs=int(cfg.get("train", {}).get("epochs", 3)),
-        max_batches_per_epoch=cfg.get("train", {}).get("max_batches_per_epoch"),
-        val_loader=val_loader,
-        start_epoch=int(progress["epoch"]),
-        start_step=int(progress["updates"]),
-        on_epoch_end=checkpoint_epoch,
-    )
-    if writer is not None:
+    try:
+        trainer.fit(
+            train_loader,
+            epochs=int(cfg.get("train", {}).get("epochs", 3)),
+            max_batches_per_epoch=cfg.get("train", {}).get("max_batches_per_epoch"),
+            val_loader=val_loader,
+            start_epoch=int(progress["epoch"]),
+            start_step=int(progress["updates"]),
+            on_epoch_end=checkpoint_epoch,
+        )
+    finally:
         writer.close()
     ckpt = cfg.get("checkpoint", {}).get("path", "outputs/bc/checkpoint.pt")
     Path(ckpt).parent.mkdir(parents=True, exist_ok=True)

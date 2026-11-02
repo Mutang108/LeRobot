@@ -55,7 +55,7 @@
 - 镜像 `isaac-lab:4.5.0-v2.1.1-leisaac-v0.1.2-src`，归档SHA与image ID见README。内部Python 3.10.15、Torch 2.5.1+cu118；包元数据与源码标签可能不同，核对真实来源，不为标签升级。
 - 使用配套运行环境，示例约定仓库挂载 `/repo`，演示 `/data/lift_cube`，输出到当前使用者可写位置。保留镜像内 `/isaaclab`、`/leisaac`；缓存与数据分开。按使用者的平台核对设备映射、RAM、磁盘和GPU资源。
 - `envs/container.py`可在宿主自动启动Docker，硬编码GPU0/设备/默认容器名并传入许可同意变量。先核对是否适合当前平台；已有兼容容器时在其中执行，不自行启动额外容器或代用户同意许可。
-- 使用镜像已有解释器，先核对NumPy/Torch/PyYAML、TensorBoard；数据读取另需PyArrow/PyAV。缺包不授权重装模拟器或Torch/CUDA。
+- 使用镜像已有解释器，先核对NumPy/Torch/PyYAML、SwanLab 0.10.3；数据读取另需PyArrow/PyAV。缺包不授权重装模拟器或Torch/CUDA。
 - 配置 `device: cpu`可能只控制策略，`env.sim_device: cuda:0`仍消耗仿真GPU；不得标成纯CPU操作。
 
 ## 4. 最小闭环入口
@@ -104,7 +104,8 @@ export PYTHONPATH="$PWD/src:/leisaac/source/leisaac${PYTHONPATH:+:$PYTHONPATH}"
 - `checkpoint.pt`是推理导出；`checkpoint.pt.training.pt`及SHA是完整续训。BC→PPO只复制规格匹配权重，新建优化器；同任务resume恢复原模型/Adam/计数/数据身份/RNG。
 - BC完整epoch保存、当前 `num_workers=0`；PPO在完整采集回合/更新边界保存。不承诺任意中途仿真接续。加入私有RNG、异步worker、外部VLA缓存前扩展恢复合同。
 - epochs/updates是总目标，不是追加量。新任务、结构或数据身份另开实验，权重初始化不伪装resume。只加载可信本地存档，SHA不等于来源认证。
-- 新输出位置与旧实验隔离，保留日志/存档。TensorBoard用真实事件，优化更新、决策步与物理tick分别记录。
+- 新输出位置与旧实验隔离，保留日志/存档和历史TensorBoard事件。新曲线用[SwanLab](../../docs/SWANLAB.md)，优化更新、决策步与物理tick分别记录；默认offline，online需私有项目，恢复显式新分段、不覆盖旧step。数值与白名单配置以外不上传，日志操作不改变科学RNG。
+- ACT/SmolVLA的离线训练使用`starter.scripts.train_lerobot`包装冻结上游logger，不改第三方源码；保留主进程选择与原生恢复，忽略模型/视频上传请求。包装通过CPU替身不表示真实模型训练已验收。日志改动补测`test_swanlab.py`和`test_liftcube_training.py`。
 
 ## 7. 改动后的最小验证
 

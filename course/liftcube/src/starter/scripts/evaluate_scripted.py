@@ -115,6 +115,7 @@ def main(argv=None):
     from starter.envs.lift_cube import shutdown_sim_app
     from starter.evaluation.evaluate import run_episode
     from starter.logging.metrics import RunManifest, try_git_hash, write_eval_outputs
+    from starter.logging.swanlab import ScalarWriter, log_episode
 
     cfg = resolve_config(args.config)
     e = cfg.get("env", {})
@@ -150,6 +151,9 @@ def main(argv=None):
         "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()})
     (args.output / "manifest.json").write_text(json.dumps(asdict(manifest), indent=2), encoding="utf-8")
     records, env = [], None
+    cfg.setdefault("eval", {})["privileged_teacher"] = args.privileged_teacher
+    cfg.setdefault("logging", {})["dir"] = str(args.output)
+    writer = ScalarWriter(cfg, "teacher-eval" if args.privileged_teacher else "script-eval")
     status = {"status": "running", "complete_episodes": 0}
     (args.output / "run-status.json").write_text(json.dumps(status), encoding="utf-8")
     try:
@@ -174,6 +178,7 @@ def main(argv=None):
                         np.savez_compressed(args.output / f"episode-{episode:04d}-rgb.npz",
                                             rgb=np.stack(recorded.frames))
                 write_eval_outputs(args.output, manifest=manifest, records=records, config_copy=cfg)
+                log_episode(writer, records, hz=env.action_spec.frequency_hz)
         status["status"] = "finished"
     except Exception as exc:
         status.update(status="error", error=f"{type(exc).__name__}: {exc}")
@@ -183,6 +188,7 @@ def main(argv=None):
         (args.output / "run-status.json").write_text(json.dumps(status, indent=2), encoding="utf-8")
         if env is not None:
             env.close()
+        writer.close()
         shutdown_sim_app()
 
 

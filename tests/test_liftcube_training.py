@@ -199,7 +199,7 @@ class LiftCubeTrainingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory, patch.object(train_bc, "load_training_data", return_value=loaded):
             cfg = Path(directory) / "config.yaml"
             cfg.write_text(yaml.safe_dump({"seed": 7, "device": "cpu", "model": {"hidden_dim": 8},
-                "data": {"batch_size": 2}, "logging": {"dir": directory, "tensorboard": False}}))
+                "data": {"batch_size": 2}, "logging": {"dir": directory, "swanlab": {"mode": "disabled"}}}))
             one, two = str(Path(directory) / "continuous.pt"), str(Path(directory) / "resumed.pt")
             train_bc.main(["--config", str(cfg), "--epochs", "2", "--checkpoint", one])
             train_bc.main(["--config", str(cfg), "--epochs", "1", "--checkpoint", two])
@@ -209,18 +209,13 @@ class LiftCubeTrainingTests(unittest.TestCase):
             b = torch.load(two + ".training.pt", weights_only=False)
             self.assert_tree_equal(a, b)
 
-    def test_tensorboard_event_roundtrip(self):
-        if importlib.util.find_spec("tensorboard") is None:
-            self.skipTest("TensorBoard logging extra not installed")
-        from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
+    def test_training_scalar_hook(self):
         with tempfile.TemporaryDirectory() as directory:
-            writer = open_writer({"logging": {"dir": directory}})
-            log_row(writer, "bc", {"loss": .25}, 4)
+            writer = open_writer({"logging": {"dir": directory, "swanlab": {"mode": "disabled"}}})
+            with patch.object(writer, "log") as logged:
+                log_row(writer, "bc", {"loss": .25}, 4)
+                logged.assert_called_once_with({"loss": .25}, 4, prefix="bc")
             writer.close()
-            events = EventAccumulator(str(Path(directory) / "tensorboard"))
-            events.Reload()
-            point = events.Scalars("bc/loss")[0]
-            self.assertEqual((point.step, point.value), (4, .25))
 
     def test_training_rejects_diagnostic_clipping(self):
         with self.assertRaisesRegex(ValueError, "diagnostic-only"):
@@ -252,7 +247,7 @@ class LiftCubeTrainingTests(unittest.TestCase):
             cfg = Path(directory) / "config.yaml"
             cfg.write_text(yaml.safe_dump({"seed": 7, "device": "cpu", "model": {"hidden_dim": 8},
                 "ppo": {"policy_hz": 30, "minibatch_size": 2, "rollout_steps": 2},
-                "logging": {"dir": directory, "tensorboard": False}}))
+                "logging": {"dir": directory, "swanlab": {"mode": "disabled"}}}))
             one, two = str(Path(directory) / "continuous.pt"), str(Path(directory) / "resumed.pt")
             train_rl.main(["--config", str(cfg), "--num-updates", "2", "--checkpoint", one])
             train_rl.main(["--config", str(cfg), "--num-updates", "1", "--checkpoint", two])

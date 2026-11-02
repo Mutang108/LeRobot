@@ -29,6 +29,7 @@
 | PickOrange任务与诊断 | [任务指南](docs/PICK_ORANGE.md)、`course/scripts/`及冻结上游任务源码；[目录AGENTS](course/scripts/AGENTS.md)、[部署边界](docs/REPRODUCIBILITY.md) |
 | PickOrange GR00T原生辅助评测 | `course/pickorange/`；[目录AGENTS](course/pickorange/AGENTS.md)、[运行指南](course/pickorange/README.md)；固定N1.5双视角、60Hz及显式物体真值夹爪辅助，不当无特权或课程正式评分 |
 | 教师、数据/权重获取、离线训练 | [资源清单](docs/RESOURCES.md)、[训练与评测](docs/TRAIN_AND_EVALUATE.md)；LiftCube显式`--privileged-teacher`，PickOrange已有上游状态机，其直接写状态不自动满足BC准入 |
+| 训练与评测曲线 | [SwanLab指南](docs/SWANLAB.md)、`starter/logging/swanlab.py`与`starter.scripts.train_lerobot`；共享数值记录，保留本地证据，不另造每模型日志器 |
 | ACT、SmolVLA、OpenVLA-OFT、π₀.₅、GR00T 接入 | 对应任务的策略包装；[架构](docs/ARCHITECTURE.md)、[接口契约](docs/INTERFACE_CONTRACTS.md)、该任务的子级 AGENTS |
 | 单front VLA与chunk生命周期 | `starter/models/`的SmolVLA/PI05/GR00T/OFT包装、共享chunk/backend I/O及[推理接口](docs/VLA_INTERFACES.md)；GR00T可显式在模型侧接收不同输入尺寸，环境保持不变；CPU替身通过不等于真实模型或GPU验收 |
 | 正式多物体任务或真机 | 先确认实际提供的环境、SDK、标定与评分包；[接口契约](docs/INTERFACE_CONTRACTS.md) |
@@ -67,6 +68,7 @@ LiftCube 已有 SmallCNN BC/PPO 参考训练与评测，`starter.utils.build_pol
 - 自动 reset 前捕获终态；区分 `terminated`、`truncated`、bootstrap 与成功。接口修正不改变物理、限位、执行器或评分条件。
 - 推理导出、权重初始化和完整续训分别处理。续训需同点模型、优化器、计数、数据位置/replay 与相关 RNG；重新 seed 不等于恢复。
 - 成功率仅统计同协议完整回合。保留失败与 partial，不换 seed、跳回合或覆盖旧证据；加载和进程退出不能证明测试完成。
+- 新训练/策略评测曲线使用SwanLab。默认offline，online须实际使用者提供私有项目；只传数值与白名单配置，不传完整cfg、媒体/权重、终端或主机探针。恢复创建新日志分段并保留全局计数，日志run不代替模型恢复。云端异常不授权打断健康worker；不自动重跑或迁移旧事件。
 
 ## 验证
 
@@ -83,6 +85,8 @@ git diff --cached --stat
 统一检查覆盖来源 SHA、项目 Python 语法、Markdown 本地链接、海报和软件单测；不启动模拟器。依赖缺失导致的 skip 必须披露，不能当相关功能通过。交付时写明实际命令、结果和未验证部分，不把合成测试写成真实仿真/真机成绩。
 
 修改VLA包装时，另在具备NumPy、CPU Torch和PyYAML的隔离环境运行`python -m unittest discover -s tests -p 'test_vla*.py' -v`；环境说明见[推理接口](docs/VLA_INTERFACES.md)。CI的`vla-cpu`专门执行这些测试，避免纯标准库检查将其全部skip；feature分支推送本身不触发此工作流，PR、main推送或手动触发才运行。
+
+修改日志接线时，另运行`tests/test_swanlab.py`和`tests/test_liftcube_training.py`；隔离环境需SwanLab 0.10.3、NumPy、CPU Torch、PyYAML。保持`--check`无SDK运行副作用，验证数值/配置白名单、RNG、计数/分段、原生logger挂钩及故障本地保全。真实SDK测试必须offline，不能把CPU QA写入团队正式云端项目。
 
 `python scripts/inspect_plan.py configs/experiment-plan.toml --print-config` 只检查计划；退出码 0 为静态通过、2 为无效、3 为模板未填齐，均不表示训练已运行。
 

@@ -20,6 +20,8 @@ The optional [planar EE layer](PLANAR_EE_DEVELOPMENT.md) uses NumPy/SciPy and a 
 
 ## Optional VLA backends
 
+Training and policy evaluation use [SwanLab](SWANLAB.md), pinned to `swanlab==0.10.3` by the LiftCube `logging` extra and CPU CI. Install it in the actual training/evaluator environment without replacing bundled simulator Torch/CUDA. Offline mode needs no login; online mode requires the user's own private destination and safe authentication. No credentials or maintainer-specific project bindings are shipped.
+
 The four inference wrappers live under `course/liftcube/src/starter/models/`. Their CPU boundary tests require NumPy, CPU Torch and PyYAML only; they do not import native model libraries or fetch weights. See [VLA interfaces](VLA_INTERFACES.md#cpu检查--cpu-checks) for an isolated test environment and fixed backend revisions.
 
 Full loading uses separate optional environments: pinned LeRobot v0.4.2 for SmolVLA, author-matched VLASH for SO101 PI05, GR00T N1.5, or the pinned SO101 OpenVLA-OFT implementation. These are not interchangeable installations and are not vendored together. Preserve the simulator's existing dependencies; use a validated inference-service boundary when they cannot coexist. Model, tokenizer, processor, statistics and trained head files must be provisioned locally under their own licenses before loading.

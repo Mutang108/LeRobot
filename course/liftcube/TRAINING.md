@@ -18,7 +18,7 @@ PPO默认`ppo.policy_hz: 30`，在60Hz环境中保持每个目标两tick。物�
 
 ## 开发命令
 
-在配套容器中，进入`course/liftcube`并设置`PYTHONPATH=$PWD/src:/leisaac/source/leisaac`。先检查已有NumPy/Torch/PyYAML和TensorBoard，不升级配套Torch/CUDA；项目的`logging` extra声明TensorBoard依赖。默认在`logging.dir/tensorboard`写曲线，BC横轴为累计优化更新，PPO横轴为累计决策数，同时记录物理tick计数。
+在配套容器中，进入`course/liftcube`并设置`PYTHONPATH=$PWD/src:/leisaac/source/leisaac`。先检查已有NumPy/Torch/PyYAML及SwanLab 0.10.3，不升级配套Torch/CUDA；项目的`logging` extra声明SwanLab依赖。默认离线写入`logging.dir/swanlab/segment-*`，在线私有项目配置见[SwanLab指南](../../docs/SWANLAB.md)。BC横轴为累计优化更新，PPO横轴为累计决策数，同时记录物理tick；不再新建TensorBoard曲线，旧事件保留。
 
 以下是训练入口示例，不是已验收数据集的发布或正式训练预算。BC要求可用LeRobot数据、正确单位/标定和episode级划分。`data.allow_action_clipping`仅供独立数据诊断，训练入口会拒绝启用它。
 
@@ -61,4 +61,4 @@ python -m starter.training.train_rl --config configs/rl_lift_cube.yaml \
 python -m unittest discover -s tests -p test_liftcube_training.py -v
 ```
 
-该命令在仓库根目录执行。真实GPU恢复、Isaac边界接续、TensorBoard事件及闭环成功率分别验收；软件测试通过不代表这些结果已经通过。
+该命令在仓库根目录执行。SwanLab另运行`tests/test_swanlab.py`的离线CPU检查。真实GPU恢复、Isaac边界接续、在线曲线显示及闭环成功率分别验收；软件测试通过不代表这些结果已经通过。

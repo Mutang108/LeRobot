@@ -6,6 +6,7 @@
 - 默认`protocols/groot-native-assisted.json`明确允许上游物体真值夹爪辅助；不把真值发给网络，不称无特权视觉baseline或课程正式评分。换物理、辅助、相机、频率、限幅或时限须新命名协议，不能沿用历史结果。
 - `--check`与`--help`不可创建AppLauncher或加载大模型。服务须显式`--run-service`，仿真须`--run-simulation`。文件IPC仅在受信任本地共享目录，不使用pickle或开放网络端口。
 - 结果目录唯一，服务创建/evaluator独占claim；不复用旧ready、删除claim、覆盖失败或自动重跑。当前无自动resume；保留partial，不重复计入已完成seed。RNG存档不能冒称任意中途物理恢复。
+- `evaluate.py`复用LiftCube包的SwanLab数值记录层，仅evaluator写run，service不重复写。查询耗时按query、结果按完整episode计数；回合记录仍须独立审核。默认offline，私有online绑定留在使用者本地；不上传RGB/HDF5/RNG、完整协议/路径或终端信息。`--check`不得导入或初始化SDK，日志修改补测`tests/test_swanlab.py`。
 - 原始模型motor、转换后rad、action manager raw和实测q分开，明确scale/offset与关节顺序；本原生辅助协议不软件限幅，其他包装的动作保护不得因此放宽。
 - 官方特权教师代码已在`third_party/leisaac`。其重力/阻尼/直接写状态与成功覆盖必须在采集说明中披露；不得把它的生成成功当成固定物理BC准入。
 - 命令与资源说明必须让新使用者从公开仓库操作；权重、数据、个人部署、凭据、设备或私有运维配置不入Git。训练流程见[训练与评测](../../docs/TRAIN_AND_EVALUATE.md)，当前推理服务不等于VLA训练器。
