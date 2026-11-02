@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+修复SwanLab测试在无NumPy的源码检查环境导入失败：评测汇总按需加载NumPy，保留原指标与日志导出接口；新增`-I -S`隔离导入回归，不改训练算法、评分或依赖版本。
+
+Load NumPy only when summarizing nonempty evaluation records, keeping scalar-tracking imports standard-library-only. Preserve existing exports and calculations, with an isolated import regression test.
+
+新训练及策略评测统一接入SwanLab：SmallCNN BC/PPO、LiftCube策略/规则/教师评测、PickOrange原生辅助evaluator，以及复用冻结LeRobot logger挂钩的ACT/SmolVLA训练包装。默认离线，在线显式选择私有项目；仅数值和白名单配置，关闭媒体/模型、终端、主机探针及原始调用栈采集。新增本地journal、新进程分段、全局计数与RNG保护及离线SDK CPU检查；保留历史TensorBoard事件，不启动新训练或仿真。
+
+Wire scalar-only SwanLab into existing training/evaluation entries and a pinned LeRobot training wrapper. Default to offline records; require an explicit private online destination. Preserve local evidence, historical events, global counters and RNG, and test privacy, segmented tracking, failure handling and real offline SDK writes on CPU. Native model-training and cloud/runtime acceptance remain separate.
+
 新增显式LiftCube特权教师，复用原视觉控制器的运动与跟踪保护；整理PickOrange GR00T双视角服务、60Hz原生辅助协议、完整回合记录及独立CPU轨迹/查询/RNG握手审核。新增模型/演示资源链接及分任务训练评测指南，更新分层AGENTS和CPU CI。新增源码尚未重新GPU/仿真验收，不继承历史52/100为新移植成绩；官方PickOrange教师直接写状态等限制显式说明。
 
 Add an explicit LiftCube privileged teacher and a separate dual-view PickOrange GR00T assisted evaluation source port, with CPU trajectory/query/RNG-handshake audits. Document resource acquisition and task-specific training/evaluation; update agent routing and CPU CI. New code awaits runtime acceptance and does not inherit the historical 52/100 score. Document state-writing caveats in the upstream teacher.

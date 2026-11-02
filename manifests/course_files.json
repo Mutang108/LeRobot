@@ -16,8 +16,8 @@
   },
   {
     "path": "course/liftcube/AGENTS.md",
-    "bytes": 20310,
-    "sha256": "c7c61798d9ba1c5f265850772c8fdf2dcae0b30278996ad51362f2f083f9f016"
+    "bytes": 20833,
+    "sha256": "9703b7dbcaaadd466249fee4dac369376d06f6fc894f5a90beda771edef4921c"
   },
   {
     "path": "course/liftcube/configs/bc_lift_cube.yaml",
@@ -51,18 +51,18 @@
   },
   {
     "path": "course/liftcube/patches/team-interface.patch",
-    "bytes": 92916,
-    "sha256": "4b98b78581f3bfa3a4a9e13191cafdd65737d863f0c53c42cd49dfc0812b649d"
+    "bytes": 95778,
+    "sha256": "ae5ba39149d2939e2895548504def8a476811450e7b703b8dcb37a982b4715ab"
   },
   {
     "path": "course/liftcube/pyproject.toml",
-    "bytes": 676,
-    "sha256": "dd191687cbdd61b291fe9098aa02972b61870f3066f7dbdc41c025b679b78fb0"
+    "bytes": 674,
+    "sha256": "5fad6ff7b871f52d88b2df269c7036f64a698f0089051eae5a1ce3454651c385"
   },
   {
     "path": "course/liftcube/README.md",
-    "bytes": 12407,
-    "sha256": "67adc7f9f38470970e72d023a566f2ab80c7db4c6ccc052116e91ea0cf2b8340"
+    "bytes": 12714,
+    "sha256": "4342fef5c0eae74a18537502ca43cc05b81e18973f680b4522e27248ad80f022"
   },
   {
     "path": "course/liftcube/src/starter/__init__.py",
@@ -181,8 +181,8 @@
   },
   {
     "path": "course/liftcube/src/starter/evaluation/evaluate.py",
-    "bytes": 8682,
-    "sha256": "6392be35d74c5bb4c4acacf8663ada4b78ad3d39fed4870ff8935a5bb98b7f2e"
+    "bytes": 9001,
+    "sha256": "0ebeb0fe2ddef004130588b58d8e847e5d4a3a8298f85759a44fa194e8c3445c"
   },
   {
     "path": "course/liftcube/src/starter/evaluation/random_policy.py",
@@ -236,8 +236,13 @@
   },
   {
     "path": "course/liftcube/src/starter/logging/metrics.py",
-    "bytes": 5378,
-    "sha256": "99cedfb9ef3cdb70ff7e32b79f0a7821a4268aafcc622d94eb4207a00f568ae0"
+    "bytes": 5460,
+    "sha256": "12908db4b3bcb92a5b5ca7666801a5a550a65838787e15dcfafcebd4ee0f1c64"
+  },
+  {
+    "path": "course/liftcube/src/starter/logging/swanlab.py",
+    "bytes": 10918,
+    "sha256": "ff181e883a54c7bd440e8d59e924d4db1250e4abd1f8b3952e8546113c23329f"
   },
   {
     "path": "course/liftcube/src/starter/models/__init__.py",
@@ -306,8 +311,8 @@
   },
   {
     "path": "course/liftcube/src/starter/scripts/evaluate_scripted.py",
-    "bytes": 10660,
-    "sha256": "51e2414d864362e94012d845482bbbd0a03d373a55378d92ff99243810c44b69"
+    "bytes": 11059,
+    "sha256": "ccd12d56046e831e6444d8f3f8836345caa52334ff64a6aee0aff7579eaa59a4"
   },
   {
     "path": "course/liftcube/src/starter/scripts/export_joint_chain.py",
@@ -325,6 +330,11 @@
     "sha256": "dba5c618b2534df13b671f865c36903b97356260fe253a3a7da8f276bd332980"
   },
   {
+    "path": "course/liftcube/src/starter/scripts/train_lerobot.py",
+    "bytes": 2322,
+    "sha256": "a77fef846d767ebf33df644d30e08aedf95e1b409aaf4149d43898dcc4070fab"
+  },
+  {
     "path": "course/liftcube/src/starter/training/__init__.py",
     "bytes": 70,
     "sha256": "2606b3f69cf170e0d0d9bd09bc166974b37ec1be23ccb857fec3bfb5534e3326"
@@ -336,18 +346,18 @@
   },
   {
     "path": "course/liftcube/src/starter/training/events.py",
-    "bytes": 803,
-    "sha256": "cf761ff622c47883daf509a55b9cef89402b10340ef127499743ed4737d92593"
+    "bytes": 394,
+    "sha256": "57e6f95940e9c6973b386ccc0c08191aae950656a27a920543b38fc77ea1a3e8"
   },
   {
     "path": "course/liftcube/src/starter/training/train_bc.py",
-    "bytes": 6608,
-    "sha256": "94582c33c3d44d2b1e7851218c708b267dd557abb685ec4ad6ff2e6f2499b29c"
+    "bytes": 6709,
+    "sha256": "35e5cd8b5cb9f696d136c584203e7bf01a187cd5972cd0434068bd45b26a4365"
   },
   {
     "path": "course/liftcube/src/starter/training/train_rl.py",
-    "bytes": 7359,
-    "sha256": "bf59da66c5df3ed563042f8c1a7a66042e4bee15170458202d845ee8ef630b4e"
+    "bytes": 7496,
+    "sha256": "01fa8b9dabf6285be8d339f0e3e9e1fdd8c6cda30ef7b52de575ed14011ca0d4"
   },
   {
     "path": "course/liftcube/src/starter/utils.py",
@@ -356,13 +366,13 @@
   },
   {
     "path": "course/liftcube/TRAINING.md",
-    "bytes": 5917,
-    "sha256": "8852a516eea3a913259cfe49b4b559f00e5cd23f771a9b4f6313b99c634afb11"
+    "bytes": 6095,
+    "sha256": "f58670be1b8cc0b3caf31b188338940f8ea6a86d0bf827dd12775afc75c8ee5a"
   },
   {
     "path": "course/pickorange/AGENTS.md",
-    "bytes": 2635,
-    "sha256": "ebf9b7067e2df7b59277346dba9b502ea019e08657a7dab2ae3e8e3e7c3496e3"
+    "bytes": 3028,
+    "sha256": "a1da166aa9c42e88924f70356b597010b3c95b57fcf62c67c84f2cd1b7b07575"
   },
   {
     "path": "course/pickorange/audit.py",
@@ -376,8 +386,8 @@
   },
   {
     "path": "course/pickorange/evaluate.py",
-    "bytes": 16799,
-    "sha256": "71a206f289199acbb0175b3469e7bcd5dadd3bc5eee4cdbb63d3a0cbcc9ef8b0"
+    "bytes": 17879,
+    "sha256": "fb1266343825038564f193a0d8d5c428e650a810cad7b9d7f01453f5626d15ca"
   },
   {
     "path": "course/pickorange/protocols/groot-native-assisted.json",
@@ -386,8 +396,8 @@
   },
   {
     "path": "course/pickorange/README.md",
-    "bytes": 7842,
-    "sha256": "2b22607fa7f09797fa5b742252f583137100cf33b70427ed98ae7ef1b6e68f2d"
+    "bytes": 8227,
+    "sha256": "b5fa1c936d5973fc5c547eb1ba79349962e4d44629a6173356ee94b1e2e0fe82"
   },
   {
     "path": "course/pickorange/service.py",

@@ -72,11 +72,17 @@ def main(argv=None):
         raise ValueError('Evaluator/service protocol mismatch')
     # Exclusive role claim. A stale run must use a new directory, not overwrite.
     (out / 'evaluator.claim').open('x').close()
-    app = env = None
+    app = env = writer = None
     started = time.monotonic()
     results = []
     query = 0
     try:
+        # Reuse scalar-only tracking without importing the model or simulator.
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'liftcube/src'))
+        from starter.logging.swanlab import ScalarWriter
+        writer = ScalarWriter(dict(seed=seeds[0], env=dict(id=cfg['task_id']),
+            eval=dict(num_episodes=len(seeds), oracle_actuator_assisted=True),
+            logging=dict(dir=str(out), swanlab=dict(name='pickorange-groot-native-assisted-eval'))), 'pickorange-eval')
         def budget():
             if time.monotonic()-started >= a.wall_seconds:
                 raise TimeoutError('Wall budget reached; preserve the partial and completed prefix')
@@ -199,6 +205,7 @@ def main(argv=None):
                         latencies.append(latency)
                         samples.append(step)
                         query_ids.append(query)
+                        writer.log(dict(inference_seconds=latency), query, prefix='inference')
                         for cam, dst in cameras.items():
                             dst.resize(len(samples), axis=0)
                             dst[-1] = payload[cam][0]
@@ -261,6 +268,11 @@ def main(argv=None):
                 completed_episodes=len(results), target_episodes=len(seeds),
                 successes=sum(r['success'] for r in results), results=results,
                 success_rate_completed_prefix=sum(r['success'] for r in results)/len(results)))
+            writer.log({key: row[key] for key in ('success', 'env_seed', 'physics_steps', 'simulated_seconds',
+                'wall_seconds', 'model_queries', 'mean_inference_seconds', 'terminated', 'truncated')}
+                | dict(completed_episodes=len(results),
+                       success_rate_completed_prefix=sum(r['success'] for r in results)/len(results)),
+                len(results), prefix='eval')
         publish(out / 'summary.json', dict(status='completed', episodes=len(results),
             successes=sum(r['success'] for r in results), protocol_name=cfg['name'],
             formal_course_evaluation=False, automatic_bc_admission=False))
@@ -274,6 +286,8 @@ def main(argv=None):
             env.close()
         if app is not None:
             app.close()
+        if writer is not None:
+            writer.close()
 
 
 if __name__ == '__main__':

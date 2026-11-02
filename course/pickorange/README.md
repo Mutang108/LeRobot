@@ -72,6 +72,8 @@ python course/pickorange/audit.py --run-dir /outputs/pickorange/new-run \
 
 `report.json`是原生完成前缀，`audit.py`通过后才对外发布该前缀成绩。数据准入还需原始模型查询、真实终态RGB新鲜度、独立冷重放、完整动作与场景审查；成功轨迹不自动变成训练数据。RNG存档供审计，不宣称保存了隐藏物理/RTX状态。
 
+`evaluate.py`复用[SwanLab共享记录层](../../docs/SWANLAB.md)，evaluator环境需SwanLab 0.10.3；默认在本run目录离线写回合与查询耗时曲线，只有显式在线配置才上传。模型service不创建重复run；RGB、HDF5和RNG存档均不上传，曲线不能替代审核。The evaluator alone records scalar curves, with media and artifacts retained locally.
+
 ## 特权教师采集 / Privileged teacher collection
 
 仓库已含官方[状态机](../../third_party/leisaac/source/leisaac/leisaac/datagen/state_machine/pick_orange.py)和生成脚本，无需另下载教师模型。在匹配环境中，**仅作为辅助教师原型**运行：

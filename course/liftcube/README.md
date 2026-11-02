@@ -96,6 +96,8 @@ Offline reading requires PyArrow and PyAV; check existing packages and preserve 
 
 `training/train_bc.py` and `training/train_rl.py` are reference training entry points. `evaluation/evaluate.py` supports custom loaders through `--policy-class package.module:ClassName`; default training budgets are examples.
 
+新训练及策略评测接入[SwanLab](../../docs/SWANLAB.md)，默认离线。ACT/SmolVLA另用`starter.scripts.train_lerobot`包装原生训练器；只记录数值和白名单配置，不传媒体或模型。New runs use scalar-only SwanLab; configure your own private destination for online tracking.
+
 规则策略使用独立`starter.scripts.evaluate_scripted`入口，先按[规则指南](../../docs/SCRIPTED_LIFTCUBE.md)完成`--check`；它会构造状态机，不通过需要模型权重加载器的通用`--policy-class`路径。[末端开发层](../../docs/PLANAR_EE_DEVELOPMENT.md)另需三维策略，不能直接复用这份六关节抓取策略。
 
 The rule policy has its own `starter.scripts.evaluate_scripted` CLI and offline calibration check; it does not use the learned checkpoint loader. The separate planar layer needs a three-component policy, not this joint-output grasp runner.

@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-logging = ["tensorboard>=2.14"]
+logging = ["swanlab==0.10.3"]
 data = ["pyarrow>=15", "av>=12"]
 gym = ["gymnasium>=0.29"]
 # Course / public versions vary. Install the versions provided by the course.

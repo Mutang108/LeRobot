@@ -19,6 +19,8 @@ Start with the [status matrix](TASKS.md) and [resources](RESOURCES.md). Commands
 
 Inference wrappers are not trainers. Use each model's own optimizer/loss and checkpoint format; no unified four-model task trainer is supplied.
 
+新训练/评测曲线统一使用[SwanLab](SWANLAB.md)，默认离线，在线须指定私有项目。只记录曲线与白名单配置，原始结果和模型保留本地。New training/evaluation curves use scalar-only SwanLab tracking; configure the private destination before online runs.
+
 ## 2. LiftCube特权教师 / LiftCube privileged teacher
 
 教师在`starter.privileged_liftcube.PrivilegedLiftCube`，读取cube相对机器人base的真实位置，复用现有开爪→定位→下降→闭合→抬升控制及限位/限速/跟踪保护；不改物理或成功条件。它是**尚未真实仿真验收的开发候选**，不能作为视觉baseline。
@@ -64,18 +66,22 @@ LiftCube本地数据检查入口见[数据指南](../course/liftcube/TRAINING.md
 These are small development examples after data acceptance, not validated task recipes. Substitute the logical dataset ID, accepted local data and fresh output directory.
 
 ```bash
-lerobot-train --policy.type=act \
+python -m starter.scripts.train_lerobot --policy.type=act \
   --dataset.repo_id=team/liftcube-accepted --dataset.root=/datasets/liftcube/accepted \
   --output_dir=/outputs/liftcube/act-dev --job_name=liftcube-act-dev \
   --policy.device=cuda --batch_size=8 --steps=1000 \
   --policy.push_to_hub=false --wandb.enable=false
 
-lerobot-train --policy.path=/models/liftcube/smolvla-a124aa1 \
+python -m starter.scripts.train_lerobot --policy.path=/models/liftcube/smolvla-a124aa1 \
   --dataset.repo_id=team/liftcube-accepted --dataset.root=/datasets/liftcube/accepted \
   --output_dir=/outputs/liftcube/smolvla-dev --job_name=liftcube-smolvla-dev \
   --policy.device=cuda --batch_size=8 --steps=1000 \
   --policy.push_to_hub=false --wandb.enable=false
 ```
+
+以上在仓库根目录设置`PYTHONPATH=$PWD/course/liftcube/src`后运行，使用独立模型环境。SwanLab包装复用原生训练器，将其W&B logger路由至只记录数值的共享层；示例中的`--wandb.enable=false`不关闭SwanLab。记录模式与项目按[SwanLab指南](SWANLAB.md)设置，不把本地项目/凭据加入共享配置。
+
+Run from the repository root with the LiftCube `src` on `PYTHONPATH`, in the separate model environment. The wrapper replaces the native logger hook only; `--wandb.enable=false` does not disable SwanLab. This bridge has CPU fixture checks, not full native model-training acceptance.
 
 使用旧模型配置前先核对当前后端支持字段，处理不生效的legacy字段须留下明确兼容记录；严格权重和统计不能放宽。SmolVLA源权重为双视角，若训练采用单front，须按[包装契约](VLA_INTERFACES.md)明确缺槽mask/预处理与导出，不能假定改数据路径就完成适配。
 

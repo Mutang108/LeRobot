@@ -115,6 +115,8 @@ See the [import inventory](docs/IMPORT_MANIFEST.md) for source provenance and in
 
 ## Documentation
 
+- [SwanLab tracking](docs/SWANLAB.md): scalar curves and sanitized configuration; offline by default, private projects for online runs.
+
 - [Development and stage acceptance](docs/GETTING_STARTED.md)
 - [LiftCube/PickOrange resources and adaptation status](docs/TASKS.md)
 - [Model weights and demonstration downloads](docs/RESOURCES.md)

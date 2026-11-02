@@ -100,7 +100,6 @@ def main(argv: list[str] | None = None) -> dict:
     saved_path = training_path(cfg)
     if not args.resume and Path(saved_path).exists():
         raise FileExistsError(f"Existing training checkpoint: {saved_path}; use --resume or a new output path")
-    writer = open_writer(cfg)
     progress = load_training(args.resume, model, identity) if args.resume else {
         "update": 0, "decision_steps": 0, "physics_ticks": 0, "history": []}
     history = progress["history"]
@@ -108,23 +107,25 @@ def main(argv: list[str] | None = None) -> dict:
     rollout_steps = int(ppo_cfg.get("rollout_steps", 640))
     if num_updates < progress["update"]:
         raise ValueError("num_updates is a total budget, smaller than restored progress")
-    for update in range(progress["update"], num_updates):
-        buf, roll_metrics = algo.collect(env, rollout_steps, seed=seed + update)
-        stats = algo.update(buf, last_value=roll_metrics.get("last_value", 0.0))
-        row = {"update": update, **roll_metrics, **stats}
-        history.append(row)
-        progress.update(update=update + 1,
-                        decision_steps=progress["decision_steps"] + len(buf),
-                        physics_ticks=progress["physics_ticks"] + int(roll_metrics["physics_ticks"]))
-        row.update(decision_steps=progress["decision_steps"], total_physics_ticks=progress["physics_ticks"])
-        save_training(saved_path, model, identity, progress)
-        log_row(writer, "ppo", row, progress["decision_steps"])
-        print(
-            f"[rl] update={update} loss={stats.get('loss', float('nan')):.4f} "
-            f"return={roll_metrics.get('mean_return', 0):.3f} steps={len(buf)}"
-        )
-    env.close()
-    if writer is not None:
+    writer = open_writer(cfg, "ppo", start_step=int(progress["decision_steps"]), resumed=bool(args.resume))
+    try:
+        for update in range(progress["update"], num_updates):
+            buf, roll_metrics = algo.collect(env, rollout_steps, seed=seed + update)
+            stats = algo.update(buf, last_value=roll_metrics.get("last_value", 0.0))
+            row = {"update": update, **roll_metrics, **stats}
+            history.append(row)
+            progress.update(update=update + 1,
+                            decision_steps=progress["decision_steps"] + len(buf),
+                            physics_ticks=progress["physics_ticks"] + int(roll_metrics["physics_ticks"]))
+            row.update(decision_steps=progress["decision_steps"], total_physics_ticks=progress["physics_ticks"])
+            save_training(saved_path, model, identity, progress)
+            log_row(writer, "ppo", row, progress["decision_steps"])
+            print(
+                f"[rl] update={update} loss={stats.get('loss', float('nan')):.4f} "
+                f"return={roll_metrics.get('mean_return', 0):.3f} steps={len(buf)}"
+            )
+    finally:
+        env.close()
         writer.close()
     ckpt = cfg.get("checkpoint", {}).get("path", "outputs/rl/checkpoint.pt")
     Path(ckpt).parent.mkdir(parents=True, exist_ok=True)

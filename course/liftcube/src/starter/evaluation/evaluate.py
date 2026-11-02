@@ -18,6 +18,7 @@ from starter.interfaces.model import SmallCNNPolicy
 from starter.interfaces.observation import Observation
 from starter.interfaces.policy import PolicyModel
 from starter.logging.metrics import EpisodeRecord, RunManifest, try_git_hash, write_eval_outputs
+from starter.logging.swanlab import ScalarWriter, log_episode
 from starter.utils import seed_all
 
 
@@ -164,23 +165,30 @@ def evaluate_policy(
     """
     seed = int(cfg.get("seed", 0))
     seed_all(seed)
-    env = make_env(cfg)
+    writer = ScalarWriter(cfg, "eval")
+    env = None
     eval_cfg = cfg.get("eval", {})
     n_ep = int(eval_cfg.get("num_episodes", 4))
     deterministic = bool(eval_cfg.get("deterministic", True))
     records: list[EpisodeRecord] = []
-    for i in range(n_ep):
-        rec = run_episode(
-            env,
-            policy,
-            seed=seed + i,
-            episode_id=i,
-            deterministic=deterministic,
-            checkpoint=checkpoint,
-            max_episode_steps=int(cfg.get("env", {}).get("max_episode_steps", 640)),
-        )
-        records.append(rec)
-    env.close()
+    try:
+        env = make_env(cfg)
+        for i in range(n_ep):
+            rec = run_episode(
+                env,
+                policy,
+                seed=seed + i,
+                episode_id=i,
+                deterministic=deterministic,
+                checkpoint=checkpoint,
+                max_episode_steps=int(cfg.get("env", {}).get("max_episode_steps", 640)),
+            )
+            records.append(rec)
+            log_episode(writer, records, hz=env.action_spec.frequency_hz)
+    finally:
+        if env is not None:
+            env.close()
+        writer.close()
     log_dir = Path(cfg.get("logging", {}).get("dir", "outputs/eval"))
     manifest = RunManifest.build(
         seed=seed,
