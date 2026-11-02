@@ -17,7 +17,7 @@ if AVAILABLE:
     from starter.interfaces.observation import Observation, ObservationSpec
     from starter.models.smolvla import SmolVLAFrontPolicy
     from starter.models.pi05 import Pi05FrontPolicy, single_front_config, strict_author_state
-    from starter.models.gr00t import Gr00tFrontPolicy, load_groot_weights
+    from starter.models.gr00t import Gr00tFrontPolicy, load_groot_weights, runtime_video_metadata
     from starter.models.openvla_oft import OpenVLAOFTFrontPolicy, check_statistics, load_local_processor
     from starter.models.backend_io import require_complete_load, tensor_chunk
     from starter.evaluation.evaluate import parse_args, run_episode
@@ -147,6 +147,32 @@ class NativeBackendTests(unittest.TestCase):
         policy = Gr00tFrontPolicy(backend, task='lift', execute_steps=2)
         with self.assertRaises(ValueError): policy.act(self.obs())
         self.assertFalse(policy._actions)
+
+    def test_groot_model_side_resolution_is_explicit_and_copy_only(self):
+        metadata = {'modalities': {'video': {'webcam': {
+            'resolution': [1280, 720], 'channels': 3, 'fps': 30}},
+            'state': {'single_arm': {'shape': [5]}}, 'action': {'gripper': {'shape': [1]}}},
+            'statistics': {'state': {'original': [12, 34]}, 'action': {'original': [56, 78]}},
+            'embodiment_tag': 'new_embodiment'}
+        before = json.dumps(metadata)
+        with self.assertRaisesRegex(ValueError, 'explicitly choose native_resize'):
+            runtime_video_metadata(metadata, 'video.webcam', ObservationSpec())
+        adapted = runtime_video_metadata(metadata, 'video.webcam', ObservationSpec(), 'native_resize')
+        self.assertEqual(adapted['modalities']['video']['webcam']['resolution'], [64, 64])
+        adapted['modalities']['video']['webcam']['resolution'] = [1280, 720]
+        self.assertEqual(adapted, metadata)  # No other field, stats or modality changed.
+        self.assertEqual(json.dumps(metadata), before)
+        matching = ObservationSpec(image_shape=(720, 1280, 3))
+        self.assertEqual(runtime_video_metadata(metadata, 'video.webcam', matching), metadata)
+        for mode in ('stretch', None, True):
+            with self.assertRaises(ValueError):
+                runtime_video_metadata(metadata, 'video.webcam', ObservationSpec(), mode)
+        for invalid in ({'resolution': [0, 720]}, {'resolution': [True, 720]},
+                        {'channels': 4}, {'fps': 60}):
+            bad = json.loads(before)
+            bad['modalities']['video']['webcam'].update(invalid)
+            with self.assertRaises(ValueError):
+                runtime_video_metadata(bad, 'video.webcam', ObservationSpec(), 'native_resize')
 
     def test_groot_checked_loader_bypasses_model_only_override(self):
         calls = []

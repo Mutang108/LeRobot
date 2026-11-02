@@ -1,5 +1,11 @@
 # VLA推理接口 / VLA inference interfaces
 
+本页的四个包装位于LiftCube包，读取单front/q6并由LiftCube执行层运行；不是PickOrange通用加载器。PickOrange原生双RGB、动作offset和任务终态需按[任务指南](PICK_ORANGE.md)另接，跨任务支持见[对照表](TASKS.md)。共同机器人形态不替代环境适配。GR00T包装仅对应N1.5，N1.6/N1.7检查点需匹配版本的独立后端。
+
+These wrappers target the LiftCube single-front/q6 contract. PickOrange requires its own observation/action/terminal adapter; they are not universal task loaders. The GR00T loader is N1.5, not N1.6/N1.7.
+
+权重、演示与完整revision见[资源清单](RESOURCES.md)，成员训练/评测步骤见[指南](TRAIN_AND_EVALUATE.md)。PickOrange GR00T双视角服务与原生辅助评测在[独立目录](../course/pickorange/README.md)，不使用这里的单front类。 / See the resource and execution guides; the dual-view PickOrange runner is separate.
+
 当前提供SmolVLA、SO101版π₀.₅、GR00T N1.5和OpenVLA-OFT单front推理包装及共享六关节chunk执行层。边界测试使用CPU替身；SmolVLA/π₀.₅另通过真实权重CPU加载及合成输入前向，OpenVLA原基座通过CPU加载和处理器检查。GR00T完整构造受下述CUDA依赖限制；任务统计/受训形态头、GPU及LiftCube闭环仍需验收。本页不提供训练入口，原SmallCNN/BC/PPO默认不变。
 
 Four single-front wrappers share joint-chunk execution. Boundary tests use CPU fixtures; separate real-weight checks cover SmolVLA/PI05 CPU loading and synthetic forwards, plus original OpenVLA core loading and preprocessing. GR00T construction has the CUDA limitation below. Task statistics/trained embodiment heads, GPU inference and LiftCube rollouts still require acceptance. No VLA trainer is supplied; SmallCNN/BC/PPO defaults are unchanged.
@@ -55,6 +61,8 @@ STATE/ACTION must use MEAN_STD and VISUAL IDENTITY. Strict loading and explicit 
 
 当前固定SmolVLA基座的处理器存档未提供此包装要求的显式六维state统计。原生模型的严格加载与归一化张量前向可单独检查，但真实motor/q包装仍须合格训练统计；不要把action统计直接当state统计，也不补造单位统计。
 
+上述缺口针对通用基座，不适用于已找到的LiftCube任务权重`azazdeaz/smolvla_so101_leisaac_lift_cube@a124aa1`：该任务导出含自身state/action统计，已与源数据核对并完成单front缺槽mask的CPU完整前向。使用时从该任务导出读取真实统计填入描述；当前环境标定、缺失wrist的技能影响和GPU闭环仍待验收。 / The task checkpoint supplies its own verified statistics; generic-base limitations must not be attributed to it.
+
 The pinned SmolVLA base processor files lack the explicit six-channel state statistics required here. Native loading/normalized-tensor forwards can be checked separately; physical motor/q adaptation still needs accepted training statistics. Do not substitute action statistics or fabricated identity values.
 
 资源与运行获准后，在兼容的已配置环境使用公共评测入口（本命令会启动仿真，不属于CPU检查）：
@@ -102,6 +110,16 @@ Common fields: `backend`, `joint_names`, `joint_units`, `model_path`, `model_rev
 GR00T的CPU受检加载入口绕开上游假设“只返回model”的`from_pretrained`包装，以HF基类获取完整loading report；禁止missing/unexpected/mismatched/error。OFT同样检查模型loading report，并严格加载已存在的head/projector（safetensors或可信weights-only state_dict），不调用会改写本地config/模型代码的辅助加载器。OFT原生函数有模块级DEVICE，必须与请求设备一致；不要在同一进程中混用不同设备。CPU fixtures不导入这些大型后端，也没有开启GPU。
 
 GR00T uses the HF base loader for a complete loading report, bypassing the native model-only return assumption. OFT checks model loading info and strictly loads existing head/projector files without the helper that edits checkpoint files. Its module-level DEVICE must match the requested device. CPU fixtures import none of these heavy backends and use no GPU.
+
+### GR00T输入分辨率 / GR00T input resolution
+
+默认`image_preprocessing: checkpoint`要求观测尺寸与checkpoint视频元数据一致。若课程仅提供front64，在本地描述中显式设置`"image_preprocessing": "native_resize"`：加载器只在内存副本中将视频输入分辨率声明为实际观测的宽高，再交原生裁剪、缩放和RGB处理。课程环境、原始图像、checkpoint文件、相机标定、状态/动作统计与权重均不改动；原生输入校验仍开启。输入帧率须与决策频率一致。
+
+The default `image_preprocessing: checkpoint` requires the observation size to match checkpoint video metadata. Set `"image_preprocessing": "native_resize"` explicitly to accept front64: only a runtime metadata copy declares the actual input width/height before native cropping, resizing and RGB processing. Environment observations, checkpoint files, calibration, normalization statistics and weights stay unchanged; native validation remains enabled. Video and decision frequencies must match.
+
+这解决格式适配，不恢复低分辨率细节，也不保证视角/标定或任务分布匹配。不要先将64×64拉伸到1280×720再宣称获得高清输入。仅预处理和形态投影CPU通过时，完整VLM/flow推理与闭环仍须另验。
+
+This resolves input formatting, not lost image detail, camera/domain alignment or task performance. Upscaling 64×64 to 1280×720 does not create high-resolution observations. Preprocessing/projection CPU checks do not replace complete VLM/flow inference and rollout acceptance.
 
 OFT的`load_local_processor()`显式使用固定后端的`PrismaticImageProcessor`与标准tokenizer组装处理器，不经过checkpoint的`AutoImageProcessor`代码分派；tokenizer设置`trust_remote_code=False`。无需交互批准或执行checkpoint附带的Python来加载图像处理配置。
 

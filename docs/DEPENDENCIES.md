@@ -1,8 +1,16 @@
 # Dependency inventory
 
+Choose the task using the [runtime/interface comparison](TASKS.md). LiftCube and PickOrange are current development tracks, not interchangeable installations.
+
 ## Current LiftCube runtime
 
 LiftCube uses the separately distributed `isaac-lab:4.5.0-v2.1.1-leisaac-v0.1.2-src` image: Isaac Sim 4.5.0, Isaac Lab v2.1.1 and LeIsaac v0.1.2. Obtain it through the [image guide](../course/liftcube/README.md#运行环境--runtime), which includes the SJTU share link and archive/image checksums. Preserve its bundled Torch/CUDA and source paths; the historical snapshots below are not a replacement for this runtime. PyArrow/PyAV are optional dataset-reading dependencies that may need a compatible install inside the application environment.
+
+## PickOrange runtime
+
+Follow the [PickOrange guide](PICK_ORANGE.md). Its diagnostic launchers expect a separate Isaac Sim/IsaacLab runtime with Python3.11 `venv_sim`/`venv_bc` overlays. The public task source is pinned LeIsaac0.4.0 with IsaacLab2.3.0; the repository does not supply an equally locked matching image/installation. Verify the actual simulator version and imports instead of deriving them from a constraint filename or installing over the LiftCube image.
+
+Kitchen/SO101 assets are external and checksum-listed below. `course/constraints-isaac51.txt` records a conflicting historical dependency experiment, not a supported unified installation recipe. Complete model backends need their own compatible environments and task adapters.
 
 ## Rule and planar-control development
 
@@ -15,6 +23,8 @@ The optional [planar EE layer](PLANAR_EE_DEVELOPMENT.md) uses NumPy/SciPy and a 
 The four inference wrappers live under `course/liftcube/src/starter/models/`. Their CPU boundary tests require NumPy, CPU Torch and PyYAML only; they do not import native model libraries or fetch weights. See [VLA interfaces](VLA_INTERFACES.md#cpu检查--cpu-checks) for an isolated test environment and fixed backend revisions.
 
 Full loading uses separate optional environments: pinned LeRobot v0.4.2 for SmolVLA, author-matched VLASH for SO101 PI05, GR00T N1.5, or the pinned SO101 OpenVLA-OFT implementation. These are not interchangeable installations and are not vendored together. Preserve the simulator's existing dependencies; use a validated inference-service boundary when they cannot coexist. Model, tokenizer, processor, statistics and trained head files must be provisioned locally under their own licenses before loading.
+
+Concrete checkpoint/dataset URLs and revisions are listed in [resources](RESOURCES.md). The PickOrange GR00T service and full-episode source port live in [course/pickorange](../course/pickorange/README.md); its audit requires NumPy and h5py, while the simulator and model processes retain separate dependencies. CPU CI installs h5py 3.12.1 and SciPy 1.14.1 for trajectory and controller fixtures.
 
 Native imports can require more than the policy class: VLASH's package initialization imports its declared Reachy SDK dependencies, while OFT imports its RLDS utilities even for inference. OFT uses its own Transformers fork, TensorFlow 2.15/TFDS and `dlimp`; the plain OpenVLA environment is insufficient. A CPU-only dependency check may use TensorFlow CPU 2.15 with NumPy 1.26 in a separate environment. Resolve and pin those dependencies before real loading rather than editing shared dependencies or stubbing missing modules. The loader uses pinned processor classes instead of enabling arbitrary checkpoint Python code.
 

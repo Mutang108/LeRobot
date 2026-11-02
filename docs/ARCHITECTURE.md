@@ -4,9 +4,9 @@
 
 ## 1. 组织原则 / Organization
 
-参考 [rl-garden](https://github.com/Nole326/rl-garden) 的算法、策略、环境、数据和训练分层。当前直接复用 `course/liftcube/src/starter/`，保留课程包的导入路径、补丁和来源清单；不为了目录对称搬动已验证代码，也不复制完整 rl-garden 作为第二套运行框架。
+参考 [rl-garden](https://github.com/Nole326/rl-garden) 的算法、策略、环境、数据和训练分层。LiftCube直接复用 `course/liftcube/src/starter/`，保留课程包的导入路径、补丁和来源清单；PickOrange运行入口在`course/pickorange/`，诊断与上游源码独立保留。两任务入口和方法支持见[任务对照](TASKS.md)，不为目录对称搬动代码或复制第二套运行框架。
 
-Follow [rl-garden](https://github.com/Nole326/rl-garden) in separating algorithms, policies, environments, data and training. Reuse `course/liftcube/src/starter/`, preserving its import paths, patches and provenance. Do not move validated code merely for symmetry or copy an entire second framework.
+Follow rl-garden's separation of algorithms, policies, environments, data and training. LiftCube uses its starter; PickOrange execution lives in its own directory, with diagnostics and pinned sources kept separate. Preserve validated import paths and provenance.
 
 策略链路为：图像与许可本体 → 模型预处理 → 策略预测 → 公共动作转换/安全执行 → 环境反馈 → 数据和指标。训练奖励可读取规则允许的特权信息，策略输入不能读取；正式评分与训练奖励分开。
 
@@ -14,9 +14,9 @@ The policy path is: images/permitted proprioception → model preprocessing → 
 
 ## 2. 当前代码与职责 / Existing responsibilities
 
-下表路径相对 `course/liftcube/src/starter/`。它描述已存在的代码，不代表所有训练或模型已验收。
+下表描述LiftCube集成，路径相对 `course/liftcube/src/starter/`。PickOrange环境见[专属指南](PICK_ORANGE.md)，模型服务/原生辅助评测见[运行目录](../course/pickorange/README.md)。两任务可复用模型计算与chunk管理，但在环境、动作、数据与评分处保持明确边界。
 
-Paths below are relative to `course/liftcube/src/starter/`. These are existing modules, not claims that all trainers or models have passed acceptance.
+The table covers LiftCube. PickOrange has separate environment and assisted execution guides. Reuse model/chunk logic only across explicit environment, action, data and scoring boundaries.
 
 | 层 / Layer | 当前位置 / Location | 负责 / Responsibility |
 | --- | --- | --- |

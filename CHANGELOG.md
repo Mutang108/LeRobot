@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+新增显式LiftCube特权教师，复用原视觉控制器的运动与跟踪保护；整理PickOrange GR00T双视角服务、60Hz原生辅助协议、完整回合记录及独立CPU轨迹/查询/RNG握手审核。新增模型/演示资源链接及分任务训练评测指南，更新分层AGENTS和CPU CI。新增源码尚未重新GPU/仿真验收，不继承历史52/100为新移植成绩；官方PickOrange教师直接写状态等限制显式说明。
+
+Add an explicit LiftCube privileged teacher and a separate dual-view PickOrange GR00T assisted evaluation source port, with CPU trajectory/query/RNG-handshake audits. Document resource acquisition and task-specific training/evaluation; update agent routing and CPU CI. New code awaits runtime acceptance and does not inherit the historical 52/100 score. Document state-writing caveats in the upstream teacher.
+
+将当前开发导航调整为LiftCube与PickOrange双任务，补充环境/观测/动作对照、脚本与演示资源、四种VLA的权重及分级验收状态，以及PickOrange独立部署指南。区分公开代码、外部资产、CPU检查与历史物理闭环；正式多物体迁移留待后续。运行代码、配置与既有成绩不变。
+
+Document separate LiftCube/PickOrange tracks with runtime/interface comparisons, script and demonstration resources, checkpoint and validation matrices for four VLA families, plus a PickOrange guide. Distinguish public code, external assets, CPU checks and historical task rollouts; defer the formal multi-object task. Runtime behavior, configurations and existing results are unchanged.
+
+新增GR00T显式`native_resize`输入模式：运行时声明实际front尺寸，复用原生图像处理，不改环境、checkpoint或统计；默认仍严格核对原尺寸。补充内存副本、非法尺寸/频率拒绝与CPU检查。
+
+Add explicit GR00T `native_resize` input handling through runtime metadata and native image transforms, without editing environments, checkpoints or statistics. Keep strict checkpoint-size matching by default and test copy isolation and invalid sizes/clocks.
+
 修正OFT本地处理器的自动分派：显式使用固定后端图像类与标准tokenizer，避免非交互加载陷入checkpoint自定义代码确认；补充CPU回归及原生依赖说明。
 
 Load OFT processors through pinned implementation classes and a standard tokenizer, avoiding checkpoint custom-code prompts during noninteractive local loading. Add CPU regression coverage and native dependency guidance.

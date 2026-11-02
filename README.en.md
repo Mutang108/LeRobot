@@ -25,14 +25,19 @@
 
 ---
 
-Start with PickOrange to learn the data/control pipeline, establish training and evaluation on LiftCube, then align with the course multi-object task and real-robot deployment.
+The current stage covers LiftCube and PickOrange as separate policy, data and evaluation tracks. The later course multi-object environment and hardware transfer are deferred.
 
 ## Current scope
 
-- **Development environment:** SO-101 LiftCube, with environment adapters, demonstration loading, BC, reference PPO and evaluation entry points. See the [LiftCube guide](course/liftcube/README.md) for the matching image and runtime.
-- **VLA interfaces:** [Single-front wrappers for SmolVLA, PI05, GR00T and OpenVLA-OFT](docs/VLA_INTERFACES.md) have passed CPU interface tests; full-model and GPU/simulator acceptance remain pending. ACT and VLA training integration are in development.
+- **LiftCube:** environment adapters, demonstration loading, BC, reference PPO, a visual rule policy and shared evaluation. See the [LiftCube guide](course/liftcube/README.md) for the matching image and runtime.
+- **PickOrange:** pinned task sources, a separate dual-view GR00T service/native-assisted evaluation source port, trajectory audits and ACT bridge diagnostics. The new source port awaits runtime acceptance; see the [PickOrange guide](course/pickorange/README.md).
+- **VLA interfaces:** [Single-front wrappers for SmolVLA, PI05, GR00T N1.5 and OpenVLA-OFT](docs/VLA_INTERFACES.md) live in the LiftCube package, with CPU checks and backend-specific acceptance still in progress. ACT/VLA training integration and PickOrange task adapters remain separate work.
 - **Rule baseline:** [LiftCube visual grasping script](docs/SCRIPTED_LIFTCUBE.md), combining RGB localization and inverse kinematics as a development reference for later calibration and task integration. Simulated grasps have succeeded; cross-scene robustness still needs improvement and independent calibration is required.
-- **Target task:** extend cube grasping/lifting to visual multi-object pick-and-place, evaluate using course-provided environments and scoring, then deploy on hardware.
+- **Later scope:** the formal multi-object task, cross-object generalization and hardware deployment. The unreleased environment is not a prerequisite for current development.
+
+See the [task and adaptation matrix](docs/TASKS.md) for runtimes, expert scripts, demonstrations and checkpoint/validation status across the four VLA families. A shared SO-101 robot does not make the interfaces interchangeable; keep configurations, checkpoints, statistics and scores separate.
+
+Obtain weights/demonstrations from [resources](docs/RESOURCES.md), then follow the [task execution guide](docs/TRAIN_AND_EVALUATE.md) for teachers, training and evaluation. The LiftCube privileged teacher is a new development candidate; PickOrange's assisted gripper control uses object truth and is not a non-privileged visual baseline.
 
 Current LiftCube uses a single front RGB stream and six-joint control; see the [interface guide](course/liftcube/README.md#接口--interface) for inputs, actions and timing. Policies use images and permitted proprioception; object/target ground truth is reserved for training rewards or offline analysis.
 
@@ -48,7 +53,7 @@ cd LeRobot
 python scripts/check_project.py
 ```
 
-This check starts neither simulation nor training. To run LiftCube, obtain the matching image from the [runtime guide](course/liftcube/README.md#运行环境--runtime) and execute task commands inside the container.
+This check starts neither simulation nor training. Use the matching image from the [LiftCube runtime guide](course/liftcube/README.md#运行环境--runtime), or the [separate PickOrange deployment](docs/PICK_ORANGE.md). Do not mix their dependencies or launchers.
 
 The rule baseline needs no demonstrations or trained weights, but does require matching robot/camera calibration. Start with the offline calibration checks in the [rule-runner guide](docs/SCRIPTED_LIFTCUBE.md). Prepare data and interfaces separately for BC/PPO using the [training guide](course/liftcube/TRAINING.md).
 
@@ -56,7 +61,7 @@ See [baseline notes](docs/BASELINE.md) and the [changelog](CHANGELOG.md) for ver
 
 ## Repository layout
 
-Task code lives in `course/liftcube/src/starter/`, organized by interfaces, data, algorithms and evaluation:
+LiftCube integration lives in `course/liftcube/src/starter/`. PickOrange execution lives in `course/pickorange/`, with diagnostics and pinned upstream task sources kept separately:
 
 ```text
 .
@@ -72,7 +77,8 @@ Task code lives in `course/liftcube/src/starter/`, organized by interfaces, data
 │   │   └── logging/           # Metric recording
 │   ├── configs/              # Current task configurations
 │   └── patches/              # Reversible changes to the course starter
-├── course/scripts/           # Standalone diagnostics
+├── course/scripts/           # PickOrange environment, replay and ACT-bridge diagnostics
+├── course/pickorange/        # Separate assisted GR00T service, evaluation and audit
 ├── configs/                  # Public experiment-plan templates
 ├── scripts/                  # Repository, provenance and plan checks
 ├── tests/                    # First-party regression tests
@@ -86,10 +92,10 @@ See [architecture](docs/ARCHITECTURE.md) for layer ownership and model integrati
 
 ## Development path
 
-1. Validate control interfaces, demonstration data and replay.
-2. Establish rule-based, ACT and compact-VLA baselines, then compare other VLAs on the task.
-3. Train with RL, explore direct fine-tuning and residuals, and run ablations.
-4. Evaluate seen, compositional and unseen conditions under a shared protocol, then align hardware deployment.
+1. Freeze each task's runtime, observations, actions and success criteria, then complete its entry points.
+2. Prioritize LiftCube rule/data acceptance and ACT/compact-VLA comparisons, while completing PickOrange adapters and full-episode evaluation.
+3. Use accepted data and models for fine-tuning, RL and relevant ablations, recording complete episodes and failures.
+4. Resume cross-object transfer, generalization and hardware alignment after the formal multi-object environment is released.
 
 BC and pretrained VLAs provide initialization or comparisons; RL is a separate training stage. Report success rate, completion time, wrong/missed grasps and placement error. Task environments define the success criteria and horizons.
 
@@ -110,7 +116,11 @@ See the [import inventory](docs/IMPORT_MANIFEST.md) for source provenance and in
 ## Documentation
 
 - [Development and stage acceptance](docs/GETTING_STARTED.md)
+- [LiftCube/PickOrange resources and adaptation status](docs/TASKS.md)
+- [Model weights and demonstration downloads](docs/RESOURCES.md)
+- [Task-specific teacher collection, training and evaluation](docs/TRAIN_AND_EVALUATE.md)
 - [LiftCube source, image and runtime](course/liftcube/README.md)
+- [PickOrange sources, separate runtime and diagnostics](docs/PICK_ORANGE.md)
 - [Visual rule reference, calibration and migration](docs/SCRIPTED_LIFTCUBE.md)
 - [Planar EE development interface and limitations](docs/PLANAR_EE_DEVELOPMENT.md)
 - [Architecture, extension points and collaboration](docs/ARCHITECTURE.md)

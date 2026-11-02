@@ -25,14 +25,19 @@
 
 ---
 
-从 PickOrange 熟悉数据与控制链路，以 LiftCube 建立训练和评测流程，再对齐课程多物体任务与真机部署。
+当前阶段推进 LiftCube 和 PickOrange 两条任务路线，分别建立策略、数据与评测流程。课程正式多物体环境与真机迁移留待后续。
 
 ## 当前范围
 
-- **开发环境**：SO-101 LiftCube，提供环境适配、演示读取、BC、参考 PPO 和评测入口。配套镜像与运行方法见 [LiftCube 指南](course/liftcube/README.md)。
-- **VLA接口**：[SmolVLA、π₀.₅、GR00T和OpenVLA-OFT单front推理包装](docs/VLA_INTERFACES.md)已通过CPU接口检查，完整模型与GPU/仿真验收待完成。ACT及VLA训练接入仍在开发。
+- **LiftCube**：提供环境适配、演示读取、BC、参考 PPO、视觉规则策略和公共评测入口。配套镜像与运行方法见 [LiftCube 指南](course/liftcube/README.md)。
+- **PickOrange**：提供冻结环境源码、独立GR00T双视角服务与原生辅助评测源码、轨迹审核及ACT数据桥接诊断；新评测移植待真实环境验收。见 [PickOrange 指南](course/pickorange/README.md)。
+- **VLA接口**：[SmolVLA、π₀.₅、GR00T N1.5和OpenVLA-OFT单front推理包装](docs/VLA_INTERFACES.md)位于LiftCube包；已有CPU检查，完整任务验收按后端推进。ACT及VLA训练接入仍在开发，PickOrange需要独立任务适配。
 - **规则基线**：[LiftCube视觉抓取脚本](docs/SCRIPTED_LIFTCUBE.md)，使用RGB定位与逆运动学，作为后续标定和任务适配的开发基准；已有仿真抓取成功，跨场景稳定性仍待改进，需要独立标定。
-- **目标任务**：从方块抓取与抬升扩展到视觉多物体抓放，按课程发布的环境和评分规则评测，再进行真机部署。
+- **后续任务**：正式多物体抓放、跨物体泛化与真机部署；保留迁移设计，当前不以未发布环境的适配为前提。
+
+两任务的环境版本、专家脚本、演示数据及四种VLA的权重与验收进度见[任务与适配状态表](docs/TASKS.md)。同为SO-101不等于接口相同，配置、权重、统计与成绩分别管理。
+
+获取模型与演示从[资源清单](docs/RESOURCES.md)开始；教师、训练及评测按[操作指南](docs/TRAIN_AND_EVALUATE.md)选择对应任务入口。LiftCube特权教师为新开发候选；PickOrange原生辅助使用物体真值夹爪控制，不作为无特权视觉baseline。
 
 当前 LiftCube 使用单路 front RGB 与六关节控制，具体输入、动作和时序见[接口说明](course/liftcube/README.md#接口--interface)。策略仅使用图像与许可本体状态，物体和目标真值用于训练奖励或离线分析。
 
@@ -48,7 +53,7 @@ cd LeRobot
 python scripts/check_project.py
 ```
 
-该检查不启动仿真或训练。运行 LiftCube 请按[镜像与环境说明](course/liftcube/README.md#运行环境--runtime)获取配套镜像，在容器内执行任务命令。
+该检查不启动仿真或训练。运行 LiftCube 请按[镜像与环境说明](course/liftcube/README.md#运行环境--runtime)获取配套镜像；PickOrange使用[独立部署入口](docs/PICK_ORANGE.md)，不要混用两套依赖或启动脚本。
 
 只运行规则基线无需演示或训练权重，但需要匹配的机器人与相机标定；从[规则脚本指南](docs/SCRIPTED_LIFTCUBE.md)的离线标定检查开始。BC/PPO训练另按[训练指南](course/liftcube/TRAINING.md)准备数据和接口。
 
@@ -56,7 +61,7 @@ python scripts/check_project.py
 
 ## 仓库结构
 
-任务代码位于 `course/liftcube/src/starter/`，按接口、数据、算法和评测分层：
+LiftCube集成代码位于 `course/liftcube/src/starter/`；PickOrange运行入口位于`course/pickorange/`，诊断工具和上游任务源码分别保留：
 
 ```text
 .
@@ -72,7 +77,8 @@ python scripts/check_project.py
 │   │   └── logging/           # 指标记录
 │   ├── configs/              # 当前任务配置
 │   └── patches/              # 相对课程原包的可逆修改
-├── course/scripts/           # 独立诊断工具
+├── course/scripts/           # PickOrange环境、重放、ACT桥接等诊断
+├── course/pickorange/        # 独立GR00T原生辅助评测、模型服务与审核
 ├── configs/                  # 公共实验计划模板
 ├── scripts/                  # 仓库、来源与计划检查
 ├── tests/                    # 项目回归测试
@@ -86,10 +92,10 @@ python scripts/check_project.py
 
 ## 开发路线
 
-1. 完成控制接口、演示数据与重放验证。
-2. 建立规则、ACT 和小规模 VLA 基线，比较其他 VLA 的任务适应性。
-3. 进行 RL 训练，探索直接微调与 residual，并完成消融实验。
-4. 在已见、组合外推和未见条件下统一评测，再对齐真机部署。
+1. 分别冻结LiftCube与PickOrange的环境、输入、动作和成功判据，补齐各自运行入口。
+2. 优先完成LiftCube规则、演示准入及ACT/小规模VLA对照；并行补齐PickOrange的任务适配与完整回合评测。
+3. 根据已验收的数据和模型推进微调、RL及必要消融，记录完整回合和失败原因。
+4. 正式多物体环境发布后，再恢复跨物体迁移、泛化和真机对齐。
 
 BC与预训练VLA作为初始化或对照，RL为独立训练阶段。评测记录成功率、完成时间、误抓/漏抓和放置误差，具体成功判据及时间上限随任务环境确定。
 
@@ -110,7 +116,11 @@ VLA 强化学习实现参考 [RLinf](docs/RLINF.md)，目前尚未接入本项�
 ## 文档
 
 - [开发起步与阶段验收](docs/GETTING_STARTED.md)
+- [LiftCube与PickOrange：资源与适配状态表](docs/TASKS.md)
+- [模型权重与专家演示获取](docs/RESOURCES.md)
+- [按任务进行教师采集、训练和评测](docs/TRAIN_AND_EVALUATE.md)
 - [LiftCube 源码、镜像与运行方法](course/liftcube/README.md)
+- [PickOrange 源码、独立环境与诊断入口](docs/PICK_ORANGE.md)
 - [视觉规则基准、标定与后续适配](docs/SCRIPTED_LIFTCUBE.md)
 - [受限末端开发接口与验证限制](docs/PLANAR_EE_DEVELOPMENT.md)
 - [架构、扩展位置与团队协作](docs/ARCHITECTURE.md)

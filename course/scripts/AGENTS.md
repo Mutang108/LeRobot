@@ -1,6 +1,8 @@
 # PickOrange与独立诊断工具：智能体指令
 
-适用于本目录，先读[根AGENTS](../../AGENTS.md)。这里含PickOrange仿真诊断及可复用软件工具，不是完整正式训练/评估套件。当前LiftCube开发走 [LiftCube AGENTS](../liftcube/AGENTS.md)，不要混装两套环境。
+适用于本目录，先读[根AGENTS](../../AGENTS.md)、[PickOrange指南](../../docs/PICK_ORANGE.md)及[任务对照](../../docs/TASKS.md)。PickOrange与LiftCube均为当前开发任务；本目录仍只含PickOrange仿真诊断及可复用软件工具，不是完整训练/评估套件。LiftCube走[专属AGENTS](../liftcube/AGENTS.md)，不要混装两套环境或只换task ID迁移策略。正式多物体环境的接入留待后续。
+
+PickOrange完整GR00T原生辅助开发评测、服务及轨迹审核走[独立目录](../pickorange/AGENTS.md)，不用本目录20帧诊断拼正式runner。数据/权重与训练流程见[资源清单](../../docs/RESOURCES.md)、[使用指南](../../docs/TRAIN_AND_EVALUATE.md)。
 
 ## 1. 工具选择与副作用
 

@@ -41,9 +41,11 @@ jobs:
       - name: Install isolated CPU test dependencies
         run: |
           python3 -m venv .local/vla-cpu
-          .local/vla-cpu/bin/python -m pip install numpy==1.26.4 PyYAML==6.0.3
+          .local/vla-cpu/bin/python -m pip install numpy==1.26.4 PyYAML==6.0.3 scipy==1.14.1 h5py==3.12.1
           .local/vla-cpu/bin/python -m pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
       - name: Test four VLA interfaces without weights or simulation
         run: |
           .local/vla-cpu/bin/python -c "import numpy, torch, yaml; assert torch.version.cuda is None"
           .local/vla-cpu/bin/python -B -m unittest discover -s tests -p 'test_vla*.py' -v
+          .local/vla-cpu/bin/python -B -m unittest discover -s tests -p test_pickorange.py -v
+          .local/vla-cpu/bin/python -B -m unittest discover -s tests -p test_scripted_liftcube.py -v

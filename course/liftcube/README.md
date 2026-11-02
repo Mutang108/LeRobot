@@ -1,10 +1,14 @@
 # SO-101 LiftCube
 
-抓取桌面方块并抬升的开发起点，包含环境适配器、演示读取、BC、参考PPO和评测入口。完整多物体抓放使用后续发布的任务环境。
+抓取桌面方块并抬升的任务，包含环境适配器、演示读取、BC、参考PPO和评测入口。当前与[PickOrange](../../docs/PICK_ORANGE.md)分别推进；环境版本、相机和动作差异见[任务对照](../../docs/TASKS.md)。正式多物体抓放留待后续。
 
-A starting point for picking up a tabletop cube, with an environment adapter, demonstration reader, BC, reference PPO and evaluation entry points. The complete multi-object task uses its separately released environment.
+A cube-lifting task with an environment adapter, demonstration reader, BC, reference PPO and evaluation entry points. It runs alongside [PickOrange](../../docs/PICK_ORANGE.md), with separate contracts listed in the [task comparison](../../docs/TASKS.md). The formal multi-object task is deferred.
 
 ## 当前状态 / Status
+
+模型/演示链接与固定版本见[资源清单](../../docs/RESOURCES.md)，教师、训练和评测步骤见[使用指南](../../docs/TRAIN_AND_EVALUATE.md)。新增特权教师显式使用cube真值、复用原控制保护，目前只有CPU检查，尚未验收真实抓取；不作为视觉baseline。
+
+See the resource and execution guides for assets and task-specific steps. The explicit object-truth teacher is a CPU-tested development candidate, not a validated expert or visual baseline.
 
 六关节环境交互与BC/PPO参考训练基础已接入，规则脚本可独立于训练使用。候选演示尚未通过正式BC准入；[四种VLA的单front包装与共享chunk层](../../docs/VLA_INTERFACES.md)已有CPU接口检查，完整模型及GPU/闭环尚未验收，ACT接入仍在开发。训练和恢复用法见[训练指南](TRAINING.md)，任务迁移与采集方案见[开发路线](../../docs/LIFTCUBE_TRANSFER.md)。
 

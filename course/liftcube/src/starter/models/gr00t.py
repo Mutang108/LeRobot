@@ -1,11 +1,39 @@
 """Single-front GR00T N1.5 adapter using native modality transforms/statistics."""
+from copy import deepcopy
 import json
 
 import numpy as np
 
 from starter.interfaces.observation import ObservationSpec
-from .joint_chunk import JointChunkPolicy
+from .joint_chunk import JointChunkPolicy, validate_front_spec
 from .backend_io import native_front, read_adapter, require_complete_load
+
+
+def runtime_video_metadata(metadata, image_key, spec, mode='checkpoint'):
+    """Declare actual input size to native transforms; preserve learned processing."""
+    validate_front_spec(spec)
+    if mode not in ('checkpoint', 'native_resize'):
+        raise ValueError('image_preprocessing must be checkpoint or native_resize')
+    if not image_key.startswith('video.'):
+        raise ValueError('Expected a native video key')
+    result = deepcopy(metadata)
+    videos = result['modalities']['video']
+    key = image_key.removeprefix('video.')
+    if list(videos) != [key] or videos[key]['channels'] != 3:
+        raise ValueError('Expected one trained RGB camera')
+    video = videos[key]
+    resolution = video['resolution']
+    if (len(resolution) != 2 or any(isinstance(n, bool) or not isinstance(n, int) or n < 1 for n in resolution)):
+        raise ValueError('Checkpoint video resolution must be positive width/height')
+    if video['fps'] != spec.control_hz:
+        raise ValueError('Checkpoint video and action decision clocks must match')
+    actual = [spec.image_shape[1], spec.image_shape[0]]
+    if mode == 'checkpoint' and list(resolution) != actual:
+        raise ValueError('Image resolution mismatch; explicitly choose native_resize for model-side preprocessing')
+    # Resolution is an input-format check, not learned camera calibration. Keep
+    # native crop/resize/interpolation, RGB, fps and all state/action stats intact.
+    video['resolution'] = actual
+    return result
 
 
 def load_groot_weights(model_class, model_path, device):
@@ -65,19 +93,26 @@ class Gr00tFrontPolicy(JointChunkPolicy):
         if not is_offline_mode():
             raise ValueError('Set HF_HUB_OFFLINE=1 before importing the backend; pre-cache backbone assets')
         from gr00t.experiment.data_config import load_data_config
-        from gr00t.model.policy import Gr00tPolicy
-        from gr00t.model.gr00t_n1 import GR00T_N1_5
         cfg = load_data_config(options['data_config'])
         if len(cfg.video_keys) != 1:
             raise ValueError('Do not use a dual-camera data config for single-front inference')
+        spec = ObservationSpec.from_dict(options['observation_spec'])
+        runtime_metadata = runtime_video_metadata(metadata[tag], cfg.video_keys[0], spec,
+                                                 options.get('image_preprocessing', 'checkpoint'))
         raw = json.loads((model / 'config.json').read_text(encoding='utf-8'))
         if raw['action_head_cfg']['action_horizon'] != len(cfg.action_indices):
             raise ValueError('Action horizon mismatch; do not recreate a random action head')
+        from gr00t.data.schema import DatasetMetadata
+        from gr00t.model.policy import Gr00tPolicy
+        from gr00t.model.gr00t_n1 import GR00T_N1_5
         class CheckedPolicy(Gr00tPolicy):
             def _load_model(self, model_path):
                 self.model = load_groot_weights(GR00T_N1_5, model_path, self.device)
+            def _load_metadata(self, exp_cfg_dir):
+                self.metadata = DatasetMetadata.model_validate(runtime_metadata)
+                self._modality_transform.set_metadata(self.metadata)
         policy = CheckedPolicy(model_path=str(model), embodiment_tag=tag, modality_config=cfg.modality_config(),
                                modality_transform=cfg.transform(), device=device)
         return cls(policy, task=options['task'], image_key=cfg.video_keys[0], joint_units=options['joint_units'],
-                   observation_spec=ObservationSpec.from_dict(options['observation_spec']),
+                   observation_spec=spec,
                    execute_steps=options['execute_steps'], frequency_hz=options['frequency_hz'])

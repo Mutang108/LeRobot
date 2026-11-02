@@ -81,6 +81,8 @@ def main(argv=None):
     parser.add_argument("--output", type=Path, help="New output directory (never overwritten)")
     parser.add_argument("--runtime-camera-calibration", action="store_true",
         help="Opt-in matching simulator camera/base API, not a hardware capability claim")
+    parser.add_argument("--privileged-teacher", action="store_true",
+        help="Use explicit cube truth instead of vision; development data candidate, not visual baseline")
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check", action="store_true", help="CPU calibration and IK checks only")
     mode.add_argument("--run-simulation", action="store_true", help="Requires separate runtime authorization")
@@ -97,6 +99,11 @@ def main(argv=None):
     if c.get('grasp_presets'):
         from starter.scripted_geometry import GeometricLiftCube
         policy_class = GeometricLiftCube
+    if args.privileged_teacher:
+        from starter.privileged_liftcube import PrivilegedLiftCube
+        policy_class = PrivilegedLiftCube
+        if args.runtime_camera_calibration:
+            parser.error('Privileged localization does not use runtime camera calibration')
     check_kinematics(policy_class(c, kin))
     if args.check:
         print(json.dumps({"status": "calibration_checks_passed", "simulation_run": False}))
@@ -125,7 +132,9 @@ def main(argv=None):
     calibration_bytes = args.calibration.read_bytes()
     (args.output / "calibration.json").write_bytes(calibration_bytes)
     manifest = RunManifest.build(seed=int(cfg.get("seed", 0)), env_name=e["id"], env_backend="lift_cube",
-        config_path=str(args.config), extra={"git": try_git_hash(), "policy": "front-rgb-rule-v1",
+        config_path=str(args.config), extra={"git": try_git_hash(),
+        "policy": "privileged-liftcube-teacher-v1" if args.privileged_teacher else "front-rgb-rule-v1",
+        "privileged_teacher": args.privileged_teacher, "automatic_bc_admission": False,
         "calibration_sha256": hashlib.sha256(calibration_bytes).hexdigest(),
         "kinematics_backend": c.get("kinematics_backend", "urdf"),
         "kinematics_sha256": c.get("chain_sha256", c.get("urdf_sha256")),
@@ -148,6 +157,9 @@ def main(argv=None):
         for episode in range(count):
             # A fresh state machine cannot leak target/stage across resets.
             policy = policy_class(c, kin)
+            if args.privileged_teacher:
+                from starter.privileged_liftcube import read_cube_in_base
+                policy.read_cube = lambda: read_cube_in_base(env)
             with (args.output / f"episode-{episode:04d}.jsonl").open("x", encoding="utf-8") as stream:
                 recorded = RecordedEnv(env, stream, runtime_camera_calibration=args.runtime_camera_calibration)
                 recorded.policy = policy

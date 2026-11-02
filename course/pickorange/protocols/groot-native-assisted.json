@@ -1,0 +1,20 @@
+{
+  "name": "pickorange-groot-n15-native-assisted-v1",
+  "task_id": "LeIsaac-SO101-PickOrange-v0",
+  "model_repo": "LightwheelAI/leisaac-pick-orange-v0",
+  "model_revision": "10f20142f96f0b9ef139aa90855a73e28a83ca74",
+  "backend_revision": "4af2b622892f7dcb5aae5a3fb70bcb02dc217b96",
+  "instruction": "Pick three oranges and put them into the plate, then reset the arm to rest state.",
+  "physics_hz": 60,
+  "action_hz": 60,
+  "chunk_length": 16,
+  "execute_steps": 16,
+  "denoising_steps": 4,
+  "episode_seconds": 60,
+  "scene_seeds": [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116],
+  "dynamic_gripper_effort": true,
+  "software_action_clipping": false,
+  "robot_gravity_enabled": true,
+  "formal_course_evaluation": false,
+  "automatic_bc_admission": false
+}
