@@ -14,7 +14,11 @@ The clone-local settings support IsaacLab's deep paths on Windows and preserve b
 
 ## Generic deployment layout
 
-For LiftCube, follow its [runtime guide](../course/liftcube/README.md): mount this repository at `/repo` and demonstrations separately at `/data/lift_cube`, then run in `/repo/course/liftcube` with the matching image's LeIsaac source on `PYTHONPATH`. The layout below describes the earlier standalone diagnostics, not a requirement to install the new starter over those environments.
+Select [LiftCube or PickOrange](TASKS.md) first. Their source/runtime versions, image streams, raw action conventions and evaluation budgets must be recorded separately; the shared SO101 body does not establish cross-task compatibility.
+
+For LiftCube, follow its [runtime guide](../course/liftcube/README.md): mount this repository at `/repo` and demonstrations separately at `/data/lift_cube`, then run in `/repo/course/liftcube` with the matching image's LeIsaac source on `PYTHONPATH`. The layout below covers [PickOrange diagnostics](PICK_ORANGE.md), which remain diagnostics within the current task track, not a complete model benchmark or a recipe for installing LiftCube over that environment.
+
+The separate [PickOrange GR00T service/evaluator](../course/pickorange/README.md) accepts explicit model/backend/output paths from the repository root. It does not require diagnostic launcher paths, but still needs a compatible independent simulator. Its native-assisted protocol, historical score and new source-port acceptance status are documented separately. Obtain fixed models/data through [resources](RESOURCES.md).
 
 The diagnostic launchers expect /workspace/course, application overlays venv_sim and venv_bc, upstream source directories leisaac and lerobot, and assets under /data/course. These are interface path conventions, not a server inventory or authorization to create/restart containers.
 

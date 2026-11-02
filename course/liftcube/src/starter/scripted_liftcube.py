@@ -250,6 +250,18 @@ class ScriptedLiftCube:
                           "grasp_motor": self.grasp_motor}
         return self.last.copy()
 
+    def _localize(self, image):
+        pixel = red_centroid(image, self.c["image_shape"])
+        scale = self.c["image_shape"][0]/64
+        self.stable = self.stable + 1 if self.pixel is not None and np.linalg.norm(pixel-self.pixel) <= 2*scale else 1
+        self.pixel = pixel
+        return pixel_to_base(pixel, self.c) if self.stable >= 3 else None
+
+    def _check_target(self, image):
+        pixel = red_centroid(image, self.c["image_shape"])
+        if np.linalg.norm(pixel-self.pixel) > 3*self.c["image_shape"][0]/64:
+            raise ValueError("Red target shifted before descent; reacquire next episode")
+
     def _step(self, image, q):
         self.ticks += 1
         c = self.c
@@ -266,12 +278,8 @@ class ScriptedLiftCube:
             if self.settled >= 3:
                 self._transition("localize")
         elif self.phase == "localize":
-            pixel = red_centroid(image, c["image_shape"])
-            scale = c["image_shape"][0]/64
-            self.stable = self.stable + 1 if self.pixel is not None and np.linalg.norm(pixel-self.pixel) <= 2*scale else 1
-            self.pixel = pixel
-            if self.stable >= 3:
-                xyz = pixel_to_base(pixel, c)
+            xyz = self._localize(image)
+            if xyz is not None:
                 # Fail before descending if any complete waypoint is unreachable.
                 for z, rotation in ((c["hover_z"], c["grasp_rotation"]),
                                     (c["grasp_z"], c["grasp_rotation"]),
@@ -281,9 +289,7 @@ class ScriptedLiftCube:
                 self._transition("hover")
         elif self.phase in ("hover", "descend", "lift"):
             if self.phase == "hover":
-                pixel = red_centroid(image, c["image_shape"])
-                if np.linalg.norm(pixel-self.pixel) > 3*c["image_shape"][0]/64:
-                    raise ValueError("Red target shifted before descent; reacquire next episode")
+                self._check_target(image)
             current_pose = self._pose(q)
             current = current_pose[:3, 3]
             self._inside(current)

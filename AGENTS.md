@@ -11,7 +11,7 @@
 
 这是课程集成仓库，不是可在根目录安装的 Hugging Face LeRobot 包；不要在根目录执行 `pip install -e .`。克隆后的工作不依赖维护者的聊天记忆、相邻项目或私有文档。
 
-首次接手时先读[开发起步](docs/GETTING_STARTED.md)。仅修改代码或文档可直接使用根目录检查环境，无需先下载镜像、数据或权重；需要运行 LiftCube 时，再按子级指令准备配套环境。新功能从最新 `main` 建短期分支；用户已经指定工作分支时沿用该分支，不自动切换。
+首次接手时先读[开发起步](docs/GETTING_STARTED.md)和[任务对照](docs/TASKS.md)。当前分别推进LiftCube和PickOrange，正式多物体任务后续再接。仅修改代码或文档可直接使用根目录检查环境，无需先下载镜像、数据或权重；运行任务时按对应指南和子级指令准备环境。新功能从最新 `main` 建短期分支；用户已经指定工作分支时沿用该分支，不自动切换。
 
 接手一个具体任务时，先从仓库确认四件事：目标任务/模型、当前入口与配置、输入输出契约、通过条件。能从文件确定的内容自行核对；只有会改变任务含义的缺口才询问用户。例如“修复单位换算”应验证现有映射及调用者，“接入某个VLA”还必须确定权重版本、动作语义和运行后端，不能用一个模型名称代替这些信息。
 
@@ -26,11 +26,14 @@
 | SO101 接口、LiftCube 数据/训练/评测 | `course/liftcube/src/starter/`；[LiftCube AGENTS](course/liftcube/AGENTS.md) |
 | LiftCube视觉规则基线 | `starter/scripted_liftcube.py`、`scripted_geometry.py`、`joint_chain.py`与`starter.scripts.evaluate_scripted`；[标定及验收](docs/SCRIPTED_LIFTCUBE.md)，实际相机标定辅助须显式启用，不得以合成标定启动仿真 |
 | 自研受限末端开发接口 | `starter/envs/planar_ee.py`、`envs/factory.py`、`tests/test_planar_ee.py`及[开发契约](docs/PLANAR_EE_DEVELOPMENT.md)；三维绝对XY/夹爪，非课程正式IK；旧关节策略不得自动接入 |
-| PickOrange 与独立诊断 | `course/scripts/`；[诊断工具 AGENTS](course/scripts/AGENTS.md)、[部署边界](docs/REPRODUCIBILITY.md) |
+| PickOrange任务与诊断 | [任务指南](docs/PICK_ORANGE.md)、`course/scripts/`及冻结上游任务源码；[目录AGENTS](course/scripts/AGENTS.md)、[部署边界](docs/REPRODUCIBILITY.md) |
+| PickOrange GR00T原生辅助评测 | `course/pickorange/`；[目录AGENTS](course/pickorange/AGENTS.md)、[运行指南](course/pickorange/README.md)；固定N1.5双视角、60Hz及显式物体真值夹爪辅助，不当无特权或课程正式评分 |
+| 教师、数据/权重获取、离线训练 | [资源清单](docs/RESOURCES.md)、[训练与评测](docs/TRAIN_AND_EVALUATE.md)；LiftCube显式`--privileged-teacher`，PickOrange已有上游状态机，其直接写状态不自动满足BC准入 |
 | ACT、SmolVLA、OpenVLA-OFT、π₀.₅、GR00T 接入 | 对应任务的策略包装；[架构](docs/ARCHITECTURE.md)、[接口契约](docs/INTERFACE_CONTRACTS.md)、该任务的子级 AGENTS |
+| 单front VLA与chunk生命周期 | `starter/models/`的SmolVLA/PI05/GR00T/OFT包装、共享chunk/backend I/O及[推理接口](docs/VLA_INTERFACES.md)；GR00T可显式在模型侧接收不同输入尺寸，环境保持不变；CPU替身通过不等于真实模型或GPU验收 |
 | 正式多物体任务或真机 | 先确认实际提供的环境、SDK、标定与评分包；[接口契约](docs/INTERFACE_CONTRACTS.md) |
 
-LiftCube 已有 SmallCNN BC/PPO 参考训练与评测，`starter.utils.build_policy()` 仍固定 SmallCNN。上游含 ACT/VLA 实现不代表当前任务已经接通。PickOrange 是另一套任务和运行环境；正式多物体与真机能力必须依据可获取的实现确认。
+LiftCube 已有 SmallCNN BC/PPO 参考训练与评测，`starter.utils.build_policy()` 仍固定 SmallCNN。PickOrange另有GR00T原生辅助评测源码，移植尚待真实环境验收，其他VLA任务后端及通用训练接入仍有缺口。禁止只换task ID、沿用单front包装或将`starter`工厂冒称通用PickOrange入口。两任务独立记录视角、动作映射、统计、预算和评分；正式多物体与真机后续按实际接口开发，不提前虚构或自动恢复其适配工作。
 
 ## 环境边界
 
@@ -38,7 +41,7 @@ LiftCube 已有 SmallCNN BC/PPO 参考训练与评测，`starter.utils.build_pol
 | --- | --- |
 | 根目录源码检查 | Git + Python 3.11+；不需要模拟器 |
 | LiftCube | 配套镜像：Isaac Sim 4.5.0 / Isaac Lab 2.1.1 / LeIsaac 0.1.2；Python 3.10.15 |
-| 历史 PickOrange 诊断 | 独立仿真/BC 环境；包装脚本含固定容器路径及 Python 3.11 路径 |
+| PickOrange | 独立仿真/BC环境；现有诊断包装含固定容器路径及Python3.11路径，无LiftCube同款可移植镜像锁 |
 | `third_party/` | 冻结参考：LeRobot v0.4.2 / LeIsaac 0.4.0 / IsaacLab v2.3.0；不等于 LiftCube 镜像内版本 |
 
 依赖、镜像、资产与权重获取入口见 [DEPENDENCIES](docs/DEPENDENCIES.md)。运行前核对解释器、实际导入路径、设备和数据/输出位置。不要把全部上游路径加入 `PYTHONPATH`，或为运行仓库检查升级模拟器的 Python/Torch/CUDA。可选模拟器与模型依赖应延迟到对应入口加载，保持纯配置与软件检查可独立运行。
@@ -47,6 +50,7 @@ LiftCube 已有 SmallCNN BC/PPO 参考训练与评测，`starter.utils.build_pol
 
 - 当前任务共用代码位于 `course/liftcube/src/starter/`：`interfaces/` 定义契约，`envs/` 处理环境，`data/` 处理演示，`training/` 负责训练与存档，`evaluation/` 负责评测。模型包装复用这些边界，不复制环境和评分逻辑。
 - `course/liftcube/configs/` 是运行配置；根 `configs/experiment-plan.toml` 只是计划模板。`course/scripts/` 保持为独立诊断工具。
+- `course/pickorange/`保存该任务模型服务/原生辅助评测及其协议，不与LiftCube或教师生成器混用。新增资源回填`docs/RESOURCES.md`及`docs/TASKS.md`，写明完整revision和实际验收级别，不提交模型参数或演示。
 - `third_party/` 为冻结来源，优先在外部适配。未经明确任务要求，不改第三方源码、依赖版本或生成文件来消除检查失败。
 - 沿用邻近代码与测试风格，复用现有函数、标准库和测试。修复实际调用链，只增加当前需求所需的实现；不预建空注册器、无关抽象或按模型复制整套训练器。
 - 代码标识符应清晰，注释解释不明显的原因。公开说明、提交消息和 PR 面向未参与对话的读者，不记录聊天过程或个人操作流水。
@@ -77,6 +81,8 @@ git diff --cached --stat
 ```
 
 统一检查覆盖来源 SHA、项目 Python 语法、Markdown 本地链接、海报和软件单测；不启动模拟器。依赖缺失导致的 skip 必须披露，不能当相关功能通过。交付时写明实际命令、结果和未验证部分，不把合成测试写成真实仿真/真机成绩。
+
+修改VLA包装时，另在具备NumPy、CPU Torch和PyYAML的隔离环境运行`python -m unittest discover -s tests -p 'test_vla*.py' -v`；环境说明见[推理接口](docs/VLA_INTERFACES.md)。CI的`vla-cpu`专门执行这些测试，避免纯标准库检查将其全部skip；feature分支推送本身不触发此工作流，PR、main推送或手动触发才运行。
 
 `python scripts/inspect_plan.py configs/experiment-plan.toml --print-config` 只检查计划；退出码 0 为静态通过、2 为无效、3 为模板未填齐，均不表示训练已运行。
 

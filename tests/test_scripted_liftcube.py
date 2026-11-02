@@ -243,6 +243,25 @@ class ScriptedLiftCubeTests(unittest.TestCase):
         self.assertEqual(p.phase, "failed")
         np.testing.assert_array_equal(q, p.act(self.obs(q)))
 
+    def test_privileged_teacher_is_explicit_and_does_not_need_red_pixels(self):
+        from starter.privileged_liftcube import PrivilegedLiftCube
+        p = PrivilegedLiftCube(self.calibration(), self.kin(), read_cube=lambda: np.array([0, 0, -.01]))
+        q = self.initial()
+        blank = np.zeros((64, 64, 3), np.uint8)
+        for _ in range(320):
+            q = p.act(self.obs(q, blank))
+            if p.phase == 'hold':
+                break
+        self.assertEqual(p.phase, 'hold', p.failure_reason)
+        self.assertTrue(p.telemetry['privileged_teacher'])
+        self.assertNotIn('success', p.telemetry)
+        p.reset()
+        self.assertIsNone(p.anchor)
+        missing = PrivilegedLiftCube(self.calibration(), self.kin())
+        for _ in range(6):
+            missing.act(self.obs(self.initial(), blank))
+        self.assertIn('reader', missing.failure_reason)
+
     def test_out_of_range_ik_and_lag_rejected(self):
         p = ScriptedLiftCube(self.calibration(), self.kin())
         with self.assertRaises(ValueError):

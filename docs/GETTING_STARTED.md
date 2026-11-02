@@ -10,17 +10,19 @@ Build one minimal loop before increasing model size or training budget: read obs
 
 Read this page, then the [interface contracts](INTERFACE_CONTRACTS.md), [dependencies](DEPENDENCIES.md) and [training validation](TRAINING_VALIDATION.md). The formal task definition takes precedence over artwork and upstream examples. Leave unpublished parameters unresolved instead of substituting familiar defaults.
 
-当前LiftCube开发从[专用说明](../course/liftcube/README.md)开始：获取配套镜像、核验SHA并在容器中运行短测。PickOrange及旧版上游快照保留作参考；不要把两套环境的依赖路径混用。
+当前先按[任务对照](TASKS.md)选择LiftCube或PickOrange，再按[资源清单](RESOURCES.md)获取模型/演示、按[训练与评测](TRAIN_AND_EVALUATE.md)选择执行入口。LiftCube已有配套镜像、视觉脚本与参考训练；PickOrange使用独立环境，另有[GR00T原生辅助服务/评测源码](../course/pickorange/README.md)，移植待实际验收。两任务不混用依赖、统计或评分，不等待尚未发布的正式多物体环境才开发。
 
-For current LiftCube work, start with the [task guide](../course/liftcube/README.md): obtain the matching image, verify its SHA and run a short check inside the container. PickOrange and historical upstream snapshots remain references; keep the two dependency paths separate.
+Choose a task in the comparison, obtain its resources and follow the execution guide. LiftCube has a matching image and reference implementations; PickOrange has a separate runtime and a GR00T assisted source port awaiting runtime acceptance. Keep task dependencies and results separate.
 
 按目标选择入口，避免把所有训练前提都套到规则推理上：
 
 | 目标 / Goal | 入口与前提 / Entry and prerequisites |
 | --- | --- |
+| PickOrange接口与重放 / PickOrange interfaces and replay | [任务指南](PICK_ORANGE.md)；独立仿真/模型环境、真实动作offset与终态，诊断不作正式评测 / Separate runtime, native action mapping and terminal capture; diagnostics are not benchmarks |
 | 视觉规则抓取 / Rule grasping | [规则指南](SCRIPTED_LIFTCUBE.md)；匹配标定与运动学，先`--check`再获准闭环，无需演示或权重 / Calibrated kinematics, offline check then authorized rollout; no dataset/weights |
 | 三维末端开发 / Planar EE development | [开发契约](PLANAR_EE_DEVELOPMENT.md)；独立标定、有效初始姿态及匹配策略，物理精度未验收 / Separate calibration, valid starting pose and compatible policy; tracking not accepted |
 | BC/PPO / Learning | [训练指南](../course/liftcube/TRAINING.md)；当前为六关节SmallCNN参考路径，BC先完成演示准入 / Six-joint SmallCNN reference path; BC requires accepted demonstrations |
+| VLA推理接口 / VLA inference interfaces | [四种包装与CPU检查](VLA_INTERFACES.md)；先验证单front、六关节与chunk边界，完整模型验收需要匹配后端、权重与统计 / Check boundaries first; full loading requires matching backends, weights and statistics |
 
 先在本地运行以下检查。第一条应成功；第二条对未填写的模板应返回退出码 3，并逐项列出缺失字段。
 

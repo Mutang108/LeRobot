@@ -28,6 +28,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--deterministic", action="store_true", default=None)
     parser.add_argument("--policy-class", type=str, default=None,
                         help="Custom policy loader as package.module:ClassName; defaults to SmallCNNPolicy.")
+    parser.add_argument("--robot_platform", choices=("SO101",), default=None,
+                        help="Select SO101 constants in the pinned OFT backend via its process CLI.")
     return parser.parse_args(argv)
 
 
@@ -47,6 +49,36 @@ def load_policy(
 
 
 def run_episode(
+    env: Any,
+    policy: PolicyModel,
+    *,
+    seed: int,
+    episode_id: int,
+    deterministic: bool,
+    checkpoint: str | None,
+    max_episode_steps: int = 640,
+) -> EpisodeRecord:
+    """Clear optional policy caches at both boundaries, including exceptions.
+
+    Legacy stateless policies need no reset method. A reset must not reseed RNG.
+    """
+    if max_episode_steps <= 0:
+        raise ValueError("max_episode_steps must be positive")
+    reset = getattr(policy, 'reset', None)
+    if reset is not None and not callable(reset):
+        raise TypeError('policy.reset must be callable')
+    if reset is not None:
+        reset()
+    try:
+        return _run_episode(env, policy, seed=seed, episode_id=episode_id,
+                            deterministic=deterministic, checkpoint=checkpoint,
+                            max_episode_steps=max_episode_steps)
+    finally:
+        if reset is not None:
+            reset()
+
+
+def _run_episode(
     env: Any,
     policy: PolicyModel,
     *,

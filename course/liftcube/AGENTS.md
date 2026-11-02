@@ -2,6 +2,8 @@
 
 适用于本目录及其子目录，与[根AGENTS](../../AGENTS.md)同时遵守。表中的源码路径相对 `src/starter/`，配置与文档路径相对本目录；验证命令另行注明工作目录。这是SO101方块抬升起点。
 
+当前任务与PickOrange分别推进，先读[任务对照](../../docs/TASKS.md)。本目录工厂只创建LiftCube，四VLA包装是单front契约；新增PickOrange需独立验证观测、原生action manager与终态，不能只换配置名。正式多物体迁移为后续工作，不作为当前ACT/VLA任务接入的等待条件。
+
 ## 1. 按任务读取
 
 | 任务 | 必读文档与代码 |
@@ -11,6 +13,7 @@
 | PPO、存档恢复 | [TRAINING](TRAINING.md)；`training/train_rl.py`、`training/checkpoint.py`，`algorithms/reference/ppo.py`、`rewards/lift_cube.py`，`configs/rl_lift_cube.yaml` |
 | 策略与评测 | `interfaces/policy.py`、`interfaces/model.py`，`utils.py::build_policy`，`evaluation/evaluate.py`，`configs/eval_lift_cube.yaml` |
 | 视觉规则脚本 | `scripted_liftcube.py`、`joint_chain.py`、`scripts/export_joint_chain.py`、`scripts/evaluate_scripted.py`、[标定与验收](../../docs/SCRIPTED_LIFTCUBE.md)；每回合新建状态机，沿用共同`run_episode`，不接训练协议 |
+| 特权教师 | `privileged_liftcube.py`、同一规则runner的`--privileged-teacher`；[使用与数据准入](../../docs/TRAIN_AND_EVALUATE.md)；物体真值单独回调，不放入Observation，不当视觉baseline或已验收专家 |
 | 受限末端开发接口 | `envs/planar_ee.py`、`envs/factory.py`、[契约](../../docs/PLANAR_EE_DEVELOPMENT.md)；`control_mode: planar_ee_dev`仅自研开发，不当课程正式控制器 |
 | ACT/VLA或任务迁移 | [架构](../../docs/ARCHITECTURE.md)、[迁移路线](../../docs/LIFTCUBE_TRANSFER.md)、[契约](../../docs/INTERFACE_CONTRACTS.md)及上面的策略/环境边界 |
 
@@ -21,8 +24,14 @@
 - **修环境或动作接口**：沿 `envs/factory.py → LiftCubeEnvAdapter.reset/step → Observation/ActionSpec` 追踪数据；先用 `tests/test_so101_adapter.py` 的替身环境覆盖单位、形状与边界，再补真实环境短测。
 - **运行规则基准**：走`starter.scripts.evaluate_scripted`，先按规则指南检查外部标定；不需要演示、训练权重或`build_policy()`。不要为此运行BC/ACT优化验证。正式标定迁移只修改读取/坐标边界，控制SDK改变时再处理执行层，复用未变验证。
 - **接入演示数据**：沿 `data/hf_adapter.py → schema/validator → loader → training/train_bc.py` 检查字段、episode划分和标签单位；先验证一小批真实样本，再做获准的小批拟合。合成单测不替代真实数据映射验收。
+- **特权教师**：显式定位回调只供`PrivilegedLiftCube`；复用视觉控制器的保护和原生评分，不把真值写进公共观测。当前为固定标定姿态/高度的开发候选，拒绝视觉grasp_presets与开爪规划；CPU通过不能更新为成功专家。权重与演示来源见[资源清单](../../docs/RESOURCES.md)。
 - **新增 ACT/VLA**：在实际接入时新增 `starter/models/` 包装，核对 `interfaces/policy.py` 中 `act/forward/update/save/load` 及调用者。推理先接 `evaluation.evaluate.load_policy` 的 `--policy-class`；训练再接 `utils.build_policy`、数据预处理和对应算法。现有BC/PPO依赖SmallCNN的具体实现，不能仅满足协议或替换模型名就宣称可训练；后端依赖保持可选。
-- **处理动作chunk**：`act()`向执行层返回当前一个六维目标，预测chunk可在包装内缓存；规格中的策略频率须与 `envs/timing.py` 一致。现有 `PolicyModel` 和评测循环没有通用策略reset回调，接入有状态模型时须补充并测试回合开始、结束、任务切换时的缓存清空，不能跨回合沿用旧动作。
+- **处理动作chunk**：`act()`向执行层返回当前一个六维目标，预测chunk可在包装内缓存；规格中的策略频率须与 `envs/timing.py` 一致。公共`run_episode`在两端和异常退出调用可选`policy.reset()`清缓存、不重seed；旧无reset策略兼容。复用`models/joint_chunk.py`；任务文本变化走`set_task()`，接管后显式reset，不能跨回合沿用旧动作。
+- **SmolVLA单front推理**：见[推理接口](../../docs/VLA_INTERFACES.md)和`tests/test_vla_interfaces.py`。本地适配JSON通过`--policy-class starter.models.smolvla:SmolVLAFrontPolicy`加载；相机首槽、缺槽mask、六维motor和显式统计严格核对。CPU替身/mask检查不等于完整权重或GPU/仿真通过；不将新包装接入SmallCNN训练器。
+- **其他VLA包装**：`models/pi05.py`保留SO101 VLASH内嵌统计/state_cond，`models/gr00t.py`使用单图模态和受检形态加载，`models/openvla_oft.py`要求六维SO101常量及已训练L1头/本体投影。加载描述和固定后端见上述接口文档；不得以假头、三图改名或HF不同模型图代替。先运行`test_vla_native_backends.py`，大型backend导入/完整模型另验。
+- **GR00T尺寸适配**：默认拒绝与checkpoint视频尺寸不符的观测；显式`image_preprocessing: native_resize`只在内存元数据副本声明实际front宽高，再走原生裁剪/缩放。保留RGB、fps、状态/动作统计、权重和文件；不改课程环境，不把上采样当高清。原生尺寸校验仍开启，变换对象按该输入规格初始化，不跨规格复用其缓存。
+- **修改VLA加载器**：先校验描述中的身份、单front观测与执行参数，再导入大型backend或分配模型；保留严格加载错误的`loading_info`。张量输出转FP32后才能交NumPy（BF16不受支持），不借转换裁剪或截维度。OFT CLI需显式`--robot_platform SO101`，其后端在首次导入时读取真实进程参数；程序调用者须自行保证常量已正确初始化，不在加载器中改全局常量或`sys.argv`。
+- **OFT本地处理器**：使用`load_local_processor()`的显式后端图像类和标准tokenizer，不因自动分派提示就开启checkpoint任意代码。真实backend导入还需要其声明的TF/TFDS/dlimp及专用Transformers；在隔离环境补齐，不修改共享环境或注入假模块来通过验收。
 - **新增完整抓放任务**：扩展 `envs/`、`envs/factory.py` 和独立任务配置，复用公共数据/策略边界；接入实际任务的观测与评分，保留LiftCube配置和回归检查。旧权重仅在规格兼容时初始化新实验，不能当作同任务resume。
 
 新模型的最小交付包含：可加载的策略、真实输入/动作映射、独立配置、相关测试、保存加载说明及依赖/权重获取方式。先验证前向与保存加载，再验证获准的少步闭环；只有完成优化和恢复检查后才标为支持训练。
@@ -109,6 +118,8 @@ python -m unittest discover -s tests -p test_liftcube_import.py -v
 python -m unittest discover -s tests -p test_scripted_liftcube.py -v
 python -m unittest discover -s tests -p test_joint_chain.py -v
 python -m unittest discover -s tests -p test_planar_ee.py -v
+python -m unittest discover -s tests -p test_vla_interfaces.py -v
+python -m unittest discover -s tests -p test_vla_native_backends.py -v
 ```
 
 - 观测/单位/命令映射优先SO101测试，使用替身环境，不等于Isaac验证。

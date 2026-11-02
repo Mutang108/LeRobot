@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+新增显式LiftCube特权教师，复用原视觉控制器的运动与跟踪保护；整理PickOrange GR00T双视角服务、60Hz原生辅助协议、完整回合记录及独立CPU轨迹/查询/RNG握手审核。新增模型/演示资源链接及分任务训练评测指南，更新分层AGENTS和CPU CI。新增源码尚未重新GPU/仿真验收，不继承历史52/100为新移植成绩；官方PickOrange教师直接写状态等限制显式说明。
+
+Add an explicit LiftCube privileged teacher and a separate dual-view PickOrange GR00T assisted evaluation source port, with CPU trajectory/query/RNG-handshake audits. Document resource acquisition and task-specific training/evaluation; update agent routing and CPU CI. New code awaits runtime acceptance and does not inherit the historical 52/100 score. Document state-writing caveats in the upstream teacher.
+
+将当前开发导航调整为LiftCube与PickOrange双任务，补充环境/观测/动作对照、脚本与演示资源、四种VLA的权重及分级验收状态，以及PickOrange独立部署指南。区分公开代码、外部资产、CPU检查与历史物理闭环；正式多物体迁移留待后续。运行代码、配置与既有成绩不变。
+
+Document separate LiftCube/PickOrange tracks with runtime/interface comparisons, script and demonstration resources, checkpoint and validation matrices for four VLA families, plus a PickOrange guide. Distinguish public code, external assets, CPU checks and historical task rollouts; defer the formal multi-object task. Runtime behavior, configurations and existing results are unchanged.
+
+新增GR00T显式`native_resize`输入模式：运行时声明实际front尺寸，复用原生图像处理，不改环境、checkpoint或统计；默认仍严格核对原尺寸。补充内存副本、非法尺寸/频率拒绝与CPU检查。
+
+Add explicit GR00T `native_resize` input handling through runtime metadata and native image transforms, without editing environments, checkpoints or statistics. Keep strict checkpoint-size matching by default and test copy isolation and invalid sizes/clocks.
+
+修正OFT本地处理器的自动分派：显式使用固定后端图像类与标准tokenizer，避免非交互加载陷入checkpoint自定义代码确认；补充CPU回归及原生依赖说明。
+
+Load OFT processors through pinned implementation classes and a standard tokenizer, avoiding checkpoint custom-code prompts during noninteractive local loading. Add CPU regression coverage and native dependency guidance.
+
+新增SmolVLA、SO101版π₀.₅、GR00T N1.5及OpenVLA-OFT单front推理包装与本地加载入口，复用六关节chunk执行、单位校验和回合/任务边界清缓存。补齐加载前参数检查、BF16输出转换、严格加载报告及OFT平台参数；同步接口、依赖和Agent指南，并增加独立CPU接口CI。完整模型、GPU及闭环验收待完成，未增加VLA训练入口。
+
+Add four single-front VLA wrappers/local loaders with shared joint-chunk execution and boundary resets. Validate execution settings before loading, handle BF16 outputs, retain strict-loading reports and expose the OFT platform flag. Update interface/dependency/agent guides and add CPU interface CI. Full-model/GPU/rollout acceptance and VLA training remain separate.
+
 同步首页双语导航、开发/训练入口、架构与依赖、接口/标定边界及来源说明。区分历史v0.1.x源码快照与LiftCube规则开发基准，明确64像素是参考默认值、规则推理无需演示或训练、自研末端层不继承六关节训练验收。运行控制、配置和历史成绩不变。
 
 Synchronize README navigation, development/training routes, architecture, dependencies, calibration contracts and provenance. Distinguish initial v0.1.x snapshots from the LiftCube rule reference, clarify default image sizing and dataset-free rule inference, and keep planar-control acceptance separate from joint training. Runtime behavior, configurations and historical results are unchanged.

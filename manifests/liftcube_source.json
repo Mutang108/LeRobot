@@ -205,7 +205,7 @@
       "path": "course/liftcube/src/starter/evaluation/evaluate.py",
       "archive_path": "lerobot-rl-stu/startcode-lerobot/src/starter/evaluation/evaluate.py",
       "original_sha256": "cf6b82a91c9b0ad4d389ff96e2b9756496718a07acb37fd61ad1f2faa49b6286",
-      "sha256": "7417fa7b0d014bf510821e52fd462f5d9a895491977857e9b8bb3a094d9b8c23",
+      "sha256": "6392be35d74c5bb4c4acacf8663ada4b78ad3d39fed4870ff8935a5bb98b7f2e",
       "modified": true
     },
     {
@@ -277,6 +277,55 @@
       "original_sha256": "99cedfb9ef3cdb70ff7e32b79f0a7821a4268aafcc622d94eb4207a00f568ae0",
       "sha256": "99cedfb9ef3cdb70ff7e32b79f0a7821a4268aafcc622d94eb4207a00f568ae0",
       "modified": false
+    },
+    {
+      "path": "course/liftcube/src/starter/models/__init__.py",
+      "archive_path": null,
+      "original_sha256": null,
+      "sha256": "2a56356bf9f7a7d08b53dfe031397ffd03450aef6ccec150954977f053ba44ba",
+      "modified": true
+    },
+    {
+      "path": "course/liftcube/src/starter/models/backend_io.py",
+      "archive_path": null,
+      "original_sha256": null,
+      "sha256": "3dfa9c001a4ec939bb94bf1b8010738a03bf28d08b2a8e3f713f2e339b9f8e03",
+      "modified": true
+    },
+    {
+      "path": "course/liftcube/src/starter/models/gr00t.py",
+      "archive_path": null,
+      "original_sha256": null,
+      "sha256": "2b854d55ac5d80f9bbe5d5ca62575d8cb36f47d5dff8051964759aa91a929a40",
+      "modified": true
+    },
+    {
+      "path": "course/liftcube/src/starter/models/joint_chunk.py",
+      "archive_path": null,
+      "original_sha256": null,
+      "sha256": "c9548ae6e0ef6446b9f0e4bd7cc8b715f8648fd17e7f29efa05d9c3797023794",
+      "modified": true
+    },
+    {
+      "path": "course/liftcube/src/starter/models/openvla_oft.py",
+      "archive_path": null,
+      "original_sha256": null,
+      "sha256": "d22d9b9228505bcd010b68ac8f0b27eca72912b149e7bf2dced62910ffcbdce5",
+      "modified": true
+    },
+    {
+      "path": "course/liftcube/src/starter/models/pi05.py",
+      "archive_path": null,
+      "original_sha256": null,
+      "sha256": "1e4a12dfbb91eb2ced0297c811287164dbb94a3bd0c2e5607c0ec69f4ba9c24f",
+      "modified": true
+    },
+    {
+      "path": "course/liftcube/src/starter/models/smolvla.py",
+      "archive_path": null,
+      "original_sha256": null,
+      "sha256": "e47200e0c51a1ca35d25169b2f18cd52a30791daf4edeabf00b26021bd042761",
+      "modified": true
     },
     {
       "path": "course/liftcube/src/starter/rewards/__init__.py",

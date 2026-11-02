@@ -2,6 +2,10 @@
 
 当前配套环境与候选演示的验收范围、结果和缺口见 [SO101 验收](SO101_ACCEPTANCE.md)。
 
+两条当前任务的实际差异见[任务对照](TASKS.md)。下述`Observation`、`info.command`及两tick保持主要属于LiftCube适配器；PickOrange仍需沿[原生观测/action manager](PICK_ORANGE.md)接入，不把一套任务的数据类当作另一套已经支持的接口。
+
+See the [task comparison](TASKS.md). The `Observation`, `info.command` and two-tick hold below describe the LiftCube adapter, not an already integrated PickOrange interface.
+
 本页规定我们开发时要核验的边界，不代替正式环境规范。配置模板是设计检查表，不是已接入的生产接口；空值表示待确认。接口变更应有新的 schema 标识、转换测试和迁移说明，不能只改一个维度数字。
 
 This page defines development checks, not the formal environment specification. The configuration template is a design checklist, not an integrated production interface; empty values are unresolved. Interface changes need new schema identifiers, conversion tests and migration notes, not just a changed dimension.
@@ -17,6 +21,10 @@ An opt-in [planar EE development controller](PLANAR_EE_DEVELOPMENT.md) accepts a
 当前先验收SO101和配套环境的接口，不以训练LiftCube策略为前提。已知Isaac `joint_pos`按弧度读取；外部`observation.state`不猜单位，必须在适配器显式声明`raw_joint_units="motor"`或`"radians"`。缺失、维度错误或非有限的关节反馈必须报错，不能补零冒充实测零位。速度/EE的已声明兼容补零与“关节位置丢失”是两种情况。真机SDK、标定、单位、曝光时间和命令确认仍按课程正式接口验收，不由这个参数替代硬件适配。
 
 ## 1. 观测 / Observations
+
+VLA推理的单front、显式统计、动作块和跨回合缓存边界见[具体接口](VLA_INTERFACES.md)。策略`reset()`是可选清缓存钩子；公共评测在开始及所有退出路径调用，不得在其中重seed或复位模型参数。任务切换与外部接管也须清掉旧块。
+
+See [VLA interfaces](VLA_INTERFACES.md) for single-front inputs, explicit statistics and chunks. Optional policy `reset()` clears caches at episode boundaries and all exit paths; it must not reseed or reset weights. Clear chunks on task changes and interventions too.
 
 策略输入显式列出图像键、本体字段顺序、形状、单位、归一化、时间戳和任务条件。图像必须对应动作前的观测，记录曝光/采样时刻与策略读取时刻。物体和目标信息来自许可的视觉或任务条件通道，不能把仿真真值改名为本体字段后传入网络。训练 reward、诊断信息与网络输入分开；critic 输入也须独立确认许可。
 
