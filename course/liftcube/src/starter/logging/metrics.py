@@ -11,8 +11,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import numpy as np
-
 from starter import __version__
 
 TERMINATION_REASONS = (
@@ -92,6 +90,9 @@ def summarize_episodes(records: list[EpisodeRecord]) -> dict[str, Any]:
             "truncated_rate": 0.0,
             "failure_counts": {},
         }
+    # Importing scalar tracking must not require the evaluation dependencies.
+    import numpy as np
+
     lengths = np.asarray([r.length for r in records], dtype=np.float64)
     returns = np.asarray([r.return_sum for r in records], dtype=np.float64)
     successes = np.asarray([r.success for r in records], dtype=np.float64)

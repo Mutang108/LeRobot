@@ -51,8 +51,8 @@
   },
   {
     "path": "course/liftcube/patches/team-interface.patch",
-    "bytes": 95105,
-    "sha256": "e2cd4273f417cbfb36aab9de492a7f1e44de456349d0b01d162ae9b59abbc02f"
+    "bytes": 95778,
+    "sha256": "ae5ba39149d2939e2895548504def8a476811450e7b703b8dcb37a982b4715ab"
   },
   {
     "path": "course/liftcube/pyproject.toml",
@@ -236,8 +236,8 @@
   },
   {
     "path": "course/liftcube/src/starter/logging/metrics.py",
-    "bytes": 5378,
-    "sha256": "99cedfb9ef3cdb70ff7e32b79f0a7821a4268aafcc622d94eb4207a00f568ae0"
+    "bytes": 5460,
+    "sha256": "12908db4b3bcb92a5b5ca7666801a5a550a65838787e15dcfafcebd4ee0f1c64"
   },
   {
     "path": "course/liftcube/src/starter/logging/swanlab.py",

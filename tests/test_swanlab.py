@@ -18,6 +18,30 @@ from starter.logging.swanlab import ScalarWriter, safe_config, scalar_metrics
 from starter.scripts.train_lerobot import run_with_swanlab
 
 
+class ImportBoundaryTests(unittest.TestCase):
+    def test_scalar_tracking_imports_without_optional_dependencies(self):
+        script = '''
+import sys
+sys.path.insert(0, sys.argv[1])
+from starter.logging import EpisodeRecord, RunManifest, TERMINATION_REASONS, summarize_episodes, write_eval_outputs
+from starter.logging.swanlab import ScalarWriter, safe_config, scalar_metrics
+from starter.scripts.train_lerobot import run_with_swanlab
+from starter.training.events import open_writer, log_row
+assert summarize_episodes([])['num_episodes'] == 0
+writer = open_writer({'logging':{'swanlab':{'mode':'disabled'}}})
+log_row(writer, 'check', {'loss':0.25}, 1)
+writer.close()
+assert not any(name in sys.modules for name in ('numpy','torch','yaml','swanlab'))
+print('STDLIB_IMPORT_OK')
+'''
+        # -I ignores inherited Python paths; -S excludes installed site packages.
+        result = subprocess.run([sys.executable, "-I", "-S", "-B", "-c", script,
+            str(ROOT / "course/liftcube/src")], cwd=ROOT, capture_output=True,
+            text=True, encoding="utf-8", timeout=15)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("STDLIB_IMPORT_OK", result.stdout)
+
+
 class FakeSDK:
     def __init__(self):
         self.calls, self.points, self.finishes = [], [], []

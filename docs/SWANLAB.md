@@ -78,6 +78,8 @@ swanlab sync /outputs/liftcube/new-run/swanlab/segment-0001/sdk/run-REPLACE \
 
 ## 软件验收 / CPU checks
 
+纯标准库导入与替身检查可用`python -S -B -m unittest discover -s tests -p test_swanlab.py -v`；实际SDK和应用依赖检查会明确skip。回归测试另在`-I -S`隔离子进程确认日志、训练日志挂钩及原有指标导出不隐式加载NumPy/Torch/SwanLab。
+
 仓库根目录、独立CPU环境：
 
 ```bash

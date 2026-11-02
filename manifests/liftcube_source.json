@@ -275,8 +275,8 @@
       "path": "course/liftcube/src/starter/logging/metrics.py",
       "archive_path": "lerobot-rl-stu/startcode-lerobot/src/starter/logging/metrics.py",
       "original_sha256": "99cedfb9ef3cdb70ff7e32b79f0a7821a4268aafcc622d94eb4207a00f568ae0",
-      "sha256": "99cedfb9ef3cdb70ff7e32b79f0a7821a4268aafcc622d94eb4207a00f568ae0",
-      "modified": false
+      "sha256": "12908db4b3bcb92a5b5ca7666801a5a550a65838787e15dcfafcebd4ee0f1c64",
+      "modified": true
     },
     {
       "path": "course/liftcube/src/starter/models/__init__.py",

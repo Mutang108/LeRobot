@@ -88,6 +88,8 @@ git diff --cached --stat
 
 修改日志接线时，另运行`tests/test_swanlab.py`和`tests/test_liftcube_training.py`；隔离环境需SwanLab 0.10.3、NumPy、CPU Torch、PyYAML。保持`--check`无SDK运行副作用，验证数值/配置白名单、RNG、计数/分段、原生logger挂钩及故障本地保全。真实SDK测试必须offline，不能把CPU QA写入团队正式云端项目。
 
+日志导入边界还须以`python -S -B -m unittest discover -s tests -p test_swanlab.py -v`检查纯标准库路径；相关optional skip按实披露，不能只在已装完整依赖的环境验收。
+
 `python scripts/inspect_plan.py configs/experiment-plan.toml --print-config` 只检查计划；退出码 0 为静态通过、2 为无效、3 为模板未填齐，均不表示训练已运行。
 
 ## 改动后同步什么
